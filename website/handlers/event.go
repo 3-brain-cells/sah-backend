@@ -34,7 +34,7 @@ func retrieveEvent(eventID int) (event Event, err error) {
 		}
 	}
 
-	return Event{0, nil}, errors.New("Event not found")
+	return Event{}, errors.New("Event not found")
 }
 
 func removeEvent(eventID int) {

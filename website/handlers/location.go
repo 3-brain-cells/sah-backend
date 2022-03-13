@@ -8,37 +8,42 @@ import (
 	"strconv"
 )
 
-type Calendar struct {
+type Location struct {
 	EventID   int
 	UserID    int
-	Available []struct {
-		start string
-		end   string
-	}
+	Latitude  float32
+	Longitude float32
+	Address   string
 }
 
-var calendars []Calendar
+func RemoveLocation(s []Location, index int) []Location {
+	ret := make([]Location, 0)
+	ret = append(ret, s[:index]...)
+	return append(ret, s[index+1:]...)
+}
 
-func retrieveCalendar(eventID int, userID int) (calendar Calendar, err error) {
-	for _, calendar := range calendars {
-		if calendar.EventID == eventID && calendar.UserID == userID {
-			return calendar, nil
+var locations []Location
+
+func retrieveLocation(eventID int, userID int) (location Location, err error) {
+	for _, location := range locations {
+		if location.EventID == eventID && location.UserID == userID {
+			return location, nil
 		}
 	}
 
-	return Calendar{0, 0, nil}, errors.New("User not found")
+	return Location{}, errors.New("Location not found")
 }
 
-func removeCalendar(eventID int, userID int) {
-	for index, calendar := range calendars {
-		if calendar.EventID == eventID && calendar.UserID == userID {
-			calendars[index] = calendars[len(calendars)-1]
-    		return
+func removeLocation(eventID int, userID int) {
+	for index, location := range locations {
+		if location.EventID == eventID && location.UserID == userID {
+			locations = RemoveLocation(locations, index)
+			return
 		}
 	}
 }
 
-func getCalendarHandler(w http.ResponseWriter, r *http.Request) {
+func getLocationHandler(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
 	if err != nil {
 		fmt.Println(fmt.Errorf("Error: %v", err))
@@ -46,28 +51,28 @@ func getCalendarHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eventID, err := strconv.Atoi(r.Form.Get("EventID"))
-	userID, err := strconv.Atoi((r.Form.Get("UserID"))
-	
-	calendar, err := retrieveCalendar(eventID, userID)
-	if calendar == Calendar{0, 0, nil} {
+	eventID, _ := strconv.Atoi(r.Form.Get("EventID"))
+	userID, _ := strconv.Atoi((r.Form.Get("UserID"))
+
+	location, err := retrieveLocation(eventID, userID)
+	if err != nil {
 		fmt.Println(fmt.Errorf("Error: %v", err))
 		w.WriteHeader(http.StatusNotFound)
 		return
 	}
 
-	calendarBytes, err := json.Marshal(calendar)
+	locationBytes, err := json.Marshal(location)
 	if err != nil {
 		fmt.Println(fmt.Errorf("Error: %v", err))
 		w.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	
-	w.Write(calendarBytes)
+
+	w.Write(locationBytes)
 }
 
-func setCalendarHandler(w http.ResponseWriter, r *http.Request) {
-	calendar := Calendar{}
+func setLocationHandler(w http.ResponseWriter, r *http.Request) {
+	location := Location{}
 
 	err := r.ParseForm()
 	if err != nil {
@@ -76,12 +81,14 @@ func setCalendarHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	calendar.EventID = r.Form.Get("EventID")
-	calendar.UserID = r.Form.Get("UserID")
-	calendar.Available = r.Form.Get("Available")
+	eventID, _ := strconv.Atoi(r.Form.Get("EventID"))
+	userID, _ := strconv.Atoi((r.Form.Get("UserID"))
+	latitude, _ := strconv.ParseFloat(r.Form.Get("Latitude"))
+	longitude, _ := strconv.ParseFloat((r.Form.Get("Longitude"))
+	address := r.Form.Get("Address")
 
-	reremoveCalendar(eventID, userID)
-	calendars = append(calendars, calendar)
+	removeLocation(locationID)
+	locations = append(locations, location)
 
 	w.WriteHeader(http.StatusFound)
 }

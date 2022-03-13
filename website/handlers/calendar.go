@@ -32,7 +32,7 @@ func retrieveCalendar(eventID int, userID int) (calendar Calendar, err error) {
 		}
 	}
 
-	return Calendar{0, 0, nil}, errors.New("User not found")
+	return Calendar{}, errors.New("User not found")
 }
 
 func removeCalendar(eventID int, userID int) {

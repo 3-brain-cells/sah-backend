@@ -18,12 +18,6 @@ import (
 	"github.com/gorilla/mux"
 )
 
-func RemoveIndex(s []int, index int) []int {
-	ret := make([]int, 0)
-	ret = append(ret, s[:index]...)
-	return append(ret, s[index+1:]...)
-}
-
 func newRouter() *mux.Router {
 	r := mux.NewRouter()
 
@@ -37,28 +31,28 @@ func newRouter() *mux.Router {
 	// all of them are POST requests because we need to specify the event ID and sometimes, user ID
 
 	// event data
-	r.HandleFunc("/get-event", getEventHandler).Methods("POST")
-	r.HandleFunc("/set-event", setEventHandler).Methods("POST")
-	r.HandleFunc("/add-event-member", getEventHandler).Methods("POST")
-	r.HandleFunc("/remove-event-member", setEventHandler).Methods("POST")
+	r.HandleFunc("/get-event", handlers.getEventHandler).Methods("POST")
+	r.HandleFunc("/set-event", handlers.setEventHandler).Methods("POST")
+	r.HandleFunc("/add-event-member", handlers.addEventMember).Methods("POST")
+	r.HandleFunc("/remove-event-member", handlers.setEventHandler).Methods("POST")
 
 	// location data
-	r.HandleFunc("/location", getLocationHandler).Methods("POST")
-	r.HandleFunc("/location", setLocationHandler).Methods("POST")
+	r.HandleFunc("/location", handlers.getLocationHandler).Methods("POST")
+	r.HandleFunc("/location", handlers.setLocationHandler).Methods("POST")
 
 	// calendar data
-	r.HandleFunc("/calendar", getCalendarHandler).Methods("POST")
-	r.HandleFunc("/calendar", setCalendarHandler).Methods("POST")
+	r.HandleFunc("/calendar", handlers.getCalendarHandler).Methods("POST")
+	r.HandleFunc("/calendar", handlers.setCalendarHandler).Methods("POST")
 
 	// voting options data
-	r.HandleFunc("/voting-options", getVotingOptionsHandler).Methods("POST")
-	r.HandleFunc("/voting-options", setVotingOptionsHandler).Methods("POST")
+	r.HandleFunc("/voting-options", handlers.getVotingOptionsHandler).Methods("POST")
+	r.HandleFunc("/voting-options", handlers.setVotingOptionsHandler).Methods("POST")
 
 	// voting results data
-	r.HandleFunc("/voting-results", getVotingResultsHandler).Methods("POST")
-	r.HandleFunc("/voting-results", setVotingResultsHandler).Methods("POST")
+	r.HandleFunc("/voting-results", handlers.getVotingResultsHandler).Methods("POST")
+	r.HandleFunc("/voting-results", handlers.setVotingResultsHandler).Methods("POST")
 
-	r.HandleFunc("/best-location", getBestLocationHandler).Methods("POST")
+	r.HandleFunc("/best-location", handlers.getBestLocationHandler).Methods("POST")
 
 	// add more?
 
