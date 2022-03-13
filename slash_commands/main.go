@@ -14,7 +14,7 @@ import (
 var (
 	GuildID        = flag.String("guild", "", "Test guild ID. If not passed - bot registers commands globally")
 	AppID          = flag.String("appid", "", "Bot app ID")
-	BotToken       = flag.String("token", "", "Bot access token")
+	BotToken       = flag.String("token", "OTUxNzA2NDU5MjMyNjk0Mjcy.YirXtQ.huZjiRXnVaLuDTCd_NS1LVuLyVU", "Bot access token")
 	RemoveCommands = flag.Bool("rmcmd", true, "Remove all commands after shutdowning or not")
 )
 
@@ -86,17 +86,16 @@ var (
 			msgformat :=
 				` Voting for event **"%s"** location and time has started: beepboop
 
-				**Possible times**
-				- 2/26 8:00 PM - 9:00 PM
-				- 2/27 7:00 PM - 8:00 PM
-				- 2/28 5:00 PM - 6:00 PM
+			**Possible times**
+			- 2/26 8:00 PM - 9:00 PM
+			- 2/27 7:00 PM - 8:00 PM
+			- 2/28 5:00 PM - 6:00 PM
 
-				**Possible locations**
-				- **Skate Park** (Owens Field Skate Park - 1351 Jim Hamilton Blvd, Columbia, SC 29205)
-				- **Beltine Lanes** (Beltine Lanes, 2154 S Beltline Blvd, Columbia, SC 29201)`
+			**Possible locations**
+			- **Skate Park** (Owens Field Skate Park - 1351 Jim Hamilton Blvd, Columbia, SC 29205)
+			- **Beltine Lanes** (Beltine Lanes, 2154 S Beltline Blvd, Columbia, SC 29201)`
 
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				// Ignore type for now, we'll discuss them in "responses" part
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
 				Data: &discordgo.InteractionResponseData{
 					Content: fmt.Sprintf(
