@@ -1,0 +1,7 @@
+# Ignore the real `.env` file
+.env
+
+# Ignore temp files
+out
+
+.vscode/
