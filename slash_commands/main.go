@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 
+	"github.com/3-brain-cells/sah-backend/env"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -15,7 +16,7 @@ var (
 	GuildID        = flag.String("guild", "", "Test guild ID. If not passed - bot registers commands globally")
 	AppID          = flag.String("appid", "", "Bot app ID")
 	BotToken       = flag.String("token", "", "Bot access token")
-	RemoveCommands = flag.Bool("rmcmd", true, "Remove all commands after shutdowning or not")
+	RemoveCommands = flag.Bool("rmcmd", false, "Remove all commands after shutdowning or not")
 )
 
 // permissions 397284730944
@@ -25,8 +26,9 @@ var s *discordgo.Session
 func init() { flag.Parse() }
 
 func init() {
+	token, _ := env.GetEnv("token", "BOT_TOKEN")
 	var err error
-	s, err = discordgo.New("Bot " + *BotToken)
+	s, err = discordgo.New("Bot " + token)
 	if err != nil {
 		log.Fatalf("Invalid bot parameters: %v", err)
 	}
@@ -84,16 +86,18 @@ var (
 			// msgformat := `Sorry, this event does not exist :(`
 
 			msgformat :=
-				` Voting for event **"%s"** location and time has started: beepboop
+				` Voting for event **"%s"** location and time has started: https://5302-128-61-84-107.ngrok.io/demo/voting/1
 
 			**Possible times**
-			- 2/26 8:00 PM - 9:00 PM
-			- 2/27 7:00 PM - 8:00 PM
-			- 2/28 5:00 PM - 6:00 PM
+			- 3/14 8:00 PM - 9:00 PM
+			- 3/15 7:00 PM - 8:00 PM
+			- 3/16 5:00 PM - 6:00 PM
 
 			**Possible locations**
 			- **Skate Park** (Owens Field Skate Park - 1351 Jim Hamilton Blvd, Columbia, SC 29205)
-			- **Beltine Lanes** (Beltine Lanes, 2154 S Beltline Blvd, Columbia, SC 29201)`
+			- **Beltine Lanes** (Beltine Lanes, 2154 S Beltline Blvd, Columbia, SC 29201)
+			- **Blossom Buffet** (2515 Sunset Blvd West Columbia, SC 29169)
+			- **Massage Therapy by Trudie Harris (232 Skyland Dr, Columbia, SC 29210)`
 
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,

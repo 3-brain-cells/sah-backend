@@ -12,59 +12,55 @@
 package main
 
 import (
-	"fmt"
-	"net/http"
+	"context"
+	"log"
+	"os"
+	"os/signal"
+	"syscall"
+	"time"
 
-	"github.com/gorilla/mux"
+	"github.com/3-brain-cells/sah-backend/api"
+	"github.com/joho/godotenv"
+	"github.com/rs/zerolog"
 )
 
-func newRouter() *mux.Router {
-	r := mux.NewRouter()
-
-	r.HandleFunc("/", index_page_handler).Methods("GET")
-
-	// do we need this?
-	staticFileDirectory := http.Dir("./assets/")
-	staticFileHandler := http.StripPrefix("/assets/", http.FileServer(staticFileDirectory))
-	r.PathPrefix("/assets/").Handler(staticFileHandler).Methods("GET")
-
-	// all of them are POST requests because we need to specify the event ID and sometimes, user ID
-
-	// event data
-	r.HandleFunc("/get-event", handlers.getEventHandler).Methods("POST")
-	r.HandleFunc("/set-event", handlers.setEventHandler).Methods("POST")
-	r.HandleFunc("/add-event-member", handlers.addEventMember).Methods("POST")
-	r.HandleFunc("/remove-event-member", handlers.setEventHandler).Methods("POST")
-
-	// location data
-	r.HandleFunc("/location", handlers.getLocationHandler).Methods("POST")
-	r.HandleFunc("/location", handlers.setLocationHandler).Methods("POST")
-
-	// calendar data
-	r.HandleFunc("/calendar", handlers.getCalendarHandler).Methods("POST")
-	r.HandleFunc("/calendar", handlers.setCalendarHandler).Methods("POST")
-
-	// voting options data
-	r.HandleFunc("/voting-options", handlers.getVotingOptionsHandler).Methods("POST")
-	r.HandleFunc("/voting-options", handlers.setVotingOptionsHandler).Methods("POST")
-
-	// voting results data
-	r.HandleFunc("/voting-results", handlers.getVotingResultsHandler).Methods("POST")
-	r.HandleFunc("/voting-results", handlers.setVotingResultsHandler).Methods("POST")
-
-	r.HandleFunc("/best-location", handlers.getBestLocationHandler).Methods("POST")
-
-	// add more?
-
-	return r
-}
-
 func main() {
-	r := mux.NewRouter()
-	http.ListenAndServe(":8080", r)
+	startup_context, _ := context.WithTimeout(context.Background(), 15*time.Second)
+	err := godotenv.Load(".env")
+	if err != nil {
+		log.Fatalf("Error loading .env file")
+	}
+
+	logger := zerolog.New(zerolog.ConsoleWriter{Out: os.Stderr}).With().Timestamp().Logger()
+
+	dbConfig := db.DBConfig{
+		User:     os.Getenv("DB_USER"),
+		DBName:   os.Getenv("DB_NAME"),
+		Password: os.Getenv("DB_PASSWORD"),
+		Host:     os.Getenv("DB_HOST"),
+	}
+	db, err := db.NewDB(startup_context, dbConfig)
+	if err != nil {
+		logger.Fatal().Err(err).Msgf("error init db")
+		os.Exit(1)
+	}
+
+	serverCtx, cancel := context.WithCancel(context.Background())
+
+	done := make(chan os.Signal, 1)
+	signal.Notify(done, os.Interrupt, syscall.SIGINT, syscall.SIGTERM)
+
+	// Propagate termination signals to the cancellation of the server context
+	go func() {
+		<-done
+		cancel()
+	}()
+
+	server := api.NewServer(logger, db)
+	server.Serve(serverCtx, 9000)
 }
 
-func index_page_handler(w http.ResponseWriter, r *http.Request) {
-	// Probably display logo here?
-	fmt.Fprintf(w, "Super Auto Hangout Backend!")
-}
+// func index_page_handler(w http.ResponseWriter, r *http.Request) {
+// 	// Probably display logo here?
+// 	fmt.Fprintf(w, "Super Auto Hangout Backend!")
+// }
