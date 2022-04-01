@@ -40,6 +40,7 @@ var (
 
 			// get the user that calls the function
 			userName := i.Interaction.Member.User.ID
+			// createEvent()
 
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,

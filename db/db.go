@@ -16,17 +16,17 @@ type Provider interface {
 
 // EventProvider provides CRUD operations for types.Event structs
 type EventProvider interface {
-	// GetAll returns all events
-	GetAll(ctx context.Context, guildID string) ([]types.Event, error)
-
 	// GetSingle returns a single event
-	GetSingle(ctx context.Context, eventID int) (types.Event, error)
+	GetSingle(ctx context.Context, eventID string) (*types.Event, error)
 
-	// Create creates a new event
-	Create(ctx context.Context, event types.Event) error
+	// Create creates a new partial event (before it is populated)
+	CreatePartial(ctx context.Context, event types.EventCreate) error
+
+	// populate the created event with other fields
+	PopulateEvent(ctx context.Context, event types.Event) error
 
 	// Update updates an existing event
-	Update(ctx context.Context, event types.Event) error
+	PostVotes(ctx context.Context, votes types.UserVotes, eventID string) error
 
 	// Delete deletes an existing event
 	Delete(ctx context.Context, eventID int) error

@@ -121,6 +121,66 @@ func (p *Provider) events() *mongo.Collection {
 	return p.client.Database(p.databaseName).Collection("events")
 }
 
+func (p *Provider) GetSingle(ctx context.Context, eventID string) (*types.Event, error) {
+	collection := p.events()
+
+	result := collection.FindOne(ctx, bson.M{"id": eventID})
+	if result.Err() == mongo.ErrNoDocuments {
+		return nil, db.NewNotFoundError(eventID)
+	}
+
+	var event types.Event
+	err := result.Decode(&event)
+	if err != nil {
+		return nil, err
+	}
+
+	return &event, nil
+}
+
+func (p *Provider) CreatePartial(ctx context.Context, event types.EventCreate) error {
+	collection := p.events()
+	_, err := collection.InsertOne(ctx, event)
+	if err != nil {
+		if writeException, ok := err.(mongo.WriteException); ok && isDuplicate(writeException) {
+			return db.NewDuplicateIDError(event.EventID)
+		}
+		return err
+	}
+	return nil
+}
+
+func (p *Provider) PopulateEvent(ctx context.Context, event types.Event) error {
+	// create a new permanent event
+	collection := p.events()
+	_, err := collection.InsertOne(ctx, event)
+	if err != nil {
+		if writeException, ok := err.(mongo.WriteException); ok && isDuplicate(writeException) {
+			return db.NewDuplicateIDError(event.EventID)
+		}
+		return err
+	}
+	return nil
+}
+
+// // Update updates an existing event
+// TODO: this needs to be fixed
+func (p *Provider) PostVotes(ctx context.Context, votes types.UserVotes, eventID string) error {
+
+	collection := p.events()
+	filter := bson.D{{Key: "id", Value: eventID}}
+	updateQuery := bson.D{{Key: "$set", Value: votes}}
+	var updatedEevent types.Event
+	err := collection.FindOneAndUpdate(ctx, filter, updateQuery).Decode(&updatedEevent)
+	if err != nil {
+		if err == mongo.ErrNoDocuments {
+			return db.NewNotFoundError(eventID)
+		}
+	}
+
+	return nil
+}
+
 // GetEvent given its ID
 func (p *Provider) GetEvent(ctx context.Context, id string) (*types.Event, error) {
 	collection := p.events()
@@ -136,4 +196,16 @@ func (p *Provider) GetEvent(ctx context.Context, id string) (*types.Event, error
 	}
 
 	return &event, nil
+}
+
+// Detects if the given write exception is caused by (in part)
+// by a duplicate key error
+func isDuplicate(writeException mongo.WriteException) bool {
+	for _, writeError := range writeException.WriteErrors {
+		if writeError.Code == duplicateError {
+			return true
+		}
+	}
+
+	return false
 }

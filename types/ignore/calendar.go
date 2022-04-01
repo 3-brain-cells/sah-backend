@@ -1,8 +1,8 @@
-package types
+package ignore
 
 type Time struct {
-	start string `json:"start"`
-	end   string `json:"end"`
+	Start string `json:"start"`
+	End   string `json:"end"`
 }
 
 type CalendarResponse struct {

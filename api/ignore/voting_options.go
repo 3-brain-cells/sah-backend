@@ -1,4 +1,4 @@
-package routes
+package ignore
 
 import (
 	"net/http"

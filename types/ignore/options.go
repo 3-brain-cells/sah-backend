@@ -1,4 +1,4 @@
-package types
+package ignore
 
 type Option struct {
 	Time      Time    `json:"time"`

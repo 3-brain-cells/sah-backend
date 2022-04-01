@@ -1,4 +1,4 @@
-package types
+package ignore
 
 type LocationResponse struct {
 	EventID   int     `json:"eventID"`
