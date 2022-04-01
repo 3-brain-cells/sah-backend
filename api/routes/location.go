@@ -11,8 +11,8 @@ import (
 type Location struct {
 	EventID   int
 	UserID    int
-	Latitude  float32
-	Longitude float32
+	Latitude  float64
+	Longitude float64
 	Address   string
 }
 
@@ -52,7 +52,7 @@ func getLocationHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	eventID, _ := strconv.Atoi(r.Form.Get("eventID"))
-	userID, _ := strconv.Atoi((r.Form.Get("userID"))
+	userID, _ := strconv.Atoi(r.Form.Get("userID"))
 
 	location, err := retrieveLocation(eventID, userID)
 	if err != nil {
@@ -81,13 +81,13 @@ func setLocationHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	eventID, _ := strconv.Atoi(r.Form.Get("eventID"))
-	userID, _ := strconv.Atoi((r.Form.Get("userID"))
-	latitude, _ := strconv.ParseFloat(r.Form.Get("latitude"))
-	longitude, _ := strconv.ParseFloat((r.Form.Get("longitude"))
-	address := r.Form.Get("address")
+	location.EventID, _ = strconv.Atoi(r.Form.Get("eventID"))
+	location.UserID, _ = strconv.Atoi(r.Form.Get("userID"))
+	location.Latitude, _ = strconv.ParseFloat(r.Form.Get("latitude"), 64)
+	location.Longitude, _ = strconv.ParseFloat(r.Form.Get("longitude"), 64)
+	location.Address = r.Form.Get("address")
 
-	removeLocation(locationID)
+	removeLocation(location.EventID, location.UserID)
 	locations = append(locations, location)
 
 	w.WriteHeader(http.StatusFound)

@@ -2,6 +2,8 @@ package db
 
 import (
 	"context"
+
+	"github.com/3-brain-cells/sah-backend/types"
 )
 
 // Provider represents a database provider implementation
@@ -9,44 +11,23 @@ type Provider interface {
 	Connect(ctx context.Context) error
 	Disconnect(ctx context.Context) error
 
-	// AnnouncementProvider
-	// ProductMetadataProvider
-	// LocationProvider
-	// MembershipProvider
+	EventProvider
 }
 
-// AnnouncementProvider provides CRUD operations for type.Announcement structs
-// type AnnouncementProvider interface {
-// 	GetAnnouncement(ctx context.Context, id string) (*types.Announcement, error)
-// 	GetAllAnnouncements(ctx context.Context) ([]types.Announcement, error)
-// 	CreateAnnouncement(ctx context.Context, announcement types.Announcement) error
-// 	DeleteAnnouncement(ctx context.Context, id string) error
-// 	UpdateAnnouncement(ctx context.Context, id string, update map[string]interface{}) (*types.Announcement, error)
-// }
+// EventProvider provides CRUD operations for types.Event structs
+type EventProvider interface {
+	// GetAll returns all events
+	GetAll(ctx context.Context, guildID string) ([]types.Event, error)
 
-// // ProductMetadataProvider provides CRUD operations for type.ProductMetadata structs
-// type ProductMetadataProvider interface {
-// 	GetProduct(ctx context.Context, id string) (*types.ProductMetadata, error)
-// 	GetAllProducts(ctx context.Context) ([]types.ProductMetadata, error)
-// 	CreateProduct(ctx context.Context, product types.ProductMetadata) error
-// 	DeleteProduct(ctx context.Context, id string) error
-// 	UpdateProduct(ctx context.Context, id string, update map[string]interface{}) (*types.ProductMetadata, error)
-// }
+	// GetSingle returns a single event
+	GetSingle(ctx context.Context, eventID int) (types.Event, error)
 
-// // LocationProvider provides CRUD operations for type.Location structs
-// type LocationProvider interface {
-// 	GetLocation(ctx context.Context, id string) (*types.Location, error)
-// 	GetAllLocations(ctx context.Context) ([]types.Location, error)
-// 	CreateLocation(ctx context.Context, location types.Location) error
-// 	DeleteLocation(ctx context.Context, id string) error
-// 	UpdateLocation(ctx context.Context, id string, update map[string]interface{}) (*types.Location, error)
-// }
+	// Create creates a new event
+	Create(ctx context.Context, event types.Event) error
 
-// // MembershipProvider provides CRUD operations for type.Membership structs
-// type MembershipProvider interface {
-// 	GetMembership(ctx context.Context, username string) (*types.Membership, error)
-// 	GetAllMemberships(ctx context.Context) ([]types.Membership, error)
-// 	CreateMembership(ctx context.Context, membership types.Membership) error
-// 	DeleteMembership(ctx context.Context, username string) error
-// 	UpdateMembership(ctx context.Context, username string, update map[string]interface{}) (*types.Membership, error)
-// }
+	// Update updates an existing event
+	Update(ctx context.Context, event types.Event) error
+
+	// Delete deletes an existing event
+	Delete(ctx context.Context, eventID int) error
+}

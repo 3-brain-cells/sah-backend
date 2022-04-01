@@ -6,14 +6,15 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 )
 
 type Calendar struct {
 	EventID   int
 	UserID    int
 	Available []struct {
-		start string
-		end   string
+		start time.Time
+		end   time.Time
 	}
 }
 
@@ -82,11 +83,26 @@ func setCalendarHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	calendar.EventID = r.Form.Get("eventID")
-	calendar.UserID = r.Form.Get("userID")
-	calendar.Available = r.Form.Get("available")
+	calendar.EventID, err = strconv.Atoi(r.Form.Get("eventID"))
+	if err != nil {
+		fmt.Println(fmt.Errorf("Error: %v", err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	calendar.UserID, err = strconv.Atoi(r.Form.Get("userID"))
+	if err != nil {
+		fmt.Println(fmt.Errorf("Error: %v", err))
+		w.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	// listOfAvailable := r.Form.Get("available")
+	// if err != nil {
+	// 	fmt.Println(fmt.Errorf("Error: %v", err))
+	// 	w.WriteHeader(http.StatusInternalServerError)
+	// 	return
+	// }
 
-	removeCalendar(eventID, userID)
+	removeCalendar(calendar.EventID, calendar.UserID)
 	calendars = append(calendars, calendar)
 
 	w.WriteHeader(http.StatusFound)

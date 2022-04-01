@@ -1,7 +1,6 @@
 package routes
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -46,66 +45,66 @@ func removeEvent(eventID int) {
 	}
 }
 
-func getEventHandler(w http.ResponseWriter, r *http.Request) {
-	err := r.ParseForm()
-	if err != nil {
-		fmt.Println(fmt.Errorf("Error: %v", err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+// func getEventHandler(w http.ResponseWriter, r *http.Request) {
+// 	err := r.ParseForm()
+// 	if err != nil {
+// 		fmt.Println(fmt.Errorf("Error: %v", err))
+// 		w.WriteHeader(http.StatusInternalServerError)
+// 		return
+// 	}
 
-	eventID, err := strconv.Atoi(r.Form.Get("eventID"))
-	userIDsStr := r.Form.Get("userIDs")
+// 	eventID, err := strconv.Atoi(r.Form.Get("eventID"))
+// 	userIDsStr := r.Form.Get("userIDs")
 
-	var userIDs []int
+// 	var userIDs []int
 
-	for _, userIDStr := range userIDsStr {
-		userID, _ := strconv.Atoi(userIDStr)
-		userIDs = append(userIDs, userID)
-	}
+// 	for _, userIDStr := range userIDsStr {
+// 		userID, _ := strconv.Atoi(userIDStr)
+// 		userIDs = append(userIDs, userID)
+// 	}
 
-	event, err := retrieveEvent(eventID)
-	if err != nil {
-		fmt.Println(fmt.Errorf("Error: %v", err))
-		w.WriteHeader(http.StatusNotFound)
-		return
-	}
+// 	event, err := retrieveEvent(eventID)
+// 	if err != nil {
+// 		fmt.Println(fmt.Errorf("Error: %v", err))
+// 		w.WriteHeader(http.StatusNotFound)
+// 		return
+// 	}
 
-	eventBytes, err := json.Marshal(event)
-	if err != nil {
-		fmt.Println(fmt.Errorf("Error: %v", err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+// 	eventBytes, err := json.Marshal(event)
+// 	if err != nil {
+// 		fmt.Println(fmt.Errorf("Error: %v", err))
+// 		w.WriteHeader(http.StatusInternalServerError)
+// 		return
+// 	}
 
-	w.Write(eventBytes)
-}
+// 	w.Write(eventBytes)
+// }
 
-func setEventHandler(w http.ResponseWriter, r *http.Request) {
-	event := Event{}
+// func setEventHandler(w http.ResponseWriter, r *http.Request) {
+// 	event := Event{}
 
-	err := r.ParseForm()
-	if err != nil {
-		fmt.Println(fmt.Errorf("Error: %v", err))
-		w.WriteHeader(http.StatusInternalServerError)
-		return
-	}
+// 	err := r.ParseForm()
+// 	if err != nil {
+// 		fmt.Println(fmt.Errorf("Error: %v", err))
+// 		w.WriteHeader(http.StatusInternalServerError)
+// 		return
+// 	}
 
-	eventID, err := strconv.Atoi(r.Form.Get("eventID"))
-	userIDsStr := r.Form.Get("userIDs")
+// 	eventID, err := strconv.Atoi(r.Form.Get("eventID"))
+// 	userIDsStr := r.Form.Get("userIDs")
 
-	var userIDs []int
+// 	var userIDs []int
 
-	for _, userIDStr := range userIDsStr {
-		userID, _ := strconv.Atoi(userIDStr)
-		userIDs = append(userIDs, userID)
-	}
+// 	for _, userIDStr := range userIDsStr {
+// 		userID, _ := strconv.Atoi(userIDStr)
+// 		userIDs = append(userIDs, userID)
+// 	}
 
-	removeEvent(eventID)
-	events = append(events, event)
+// 	removeEvent(eventID)
+// 	events = append(events, event)
 
-	w.WriteHeader(http.StatusFound)
-}
+// 	w.WriteHeader(http.StatusFound)
+// }
 
 func addEventMember(w http.ResponseWriter, r *http.Request) {
 	err := r.ParseForm()
