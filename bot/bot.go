@@ -21,58 +21,10 @@ var (
 // Constraints (make function similar to):
 func ExampleRunFunction(ctx context.Context, dbProvider db.Provider) error { return nil }
 
-// permissions 397284730944
-
-// var (
-// 	integerOptionMinValue = 1.0
-
-// 	commands = []*discordgo.ApplicationCommand{
-// 		{
-// 			Name:        "create-event",
-// 			Description: "Command to create an event",
-// 		},
-// 	}
-// 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-// 		"create-event": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-// 			/* TODO
-// 			call create_event function
-// 				- should read the user (i.Interaction.User.Username) that calls the function
-// 				- should return the event link
-// 				- update the GuildID:UserID:Link to database
-// 			*/
-
-// 			userID := i.Interaction.Member.User.ID
-// 			guildID := i.Interaction.GuildID
-
-// 			// TODO: fix
-// 			oauth_login(conf);
-
-// 			content := create_event(userID, guildID, _)
-
-// 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-// 				Type: discordgo.InteractionResponseChannelMessageWithSource,
-// 				Data: &discordgo.InteractionResponseData{
-// 					Content: content,
-// 				},
-// 			})
-// 		},
-// 	}
-// )
-
 func RunBot(dbProvider db.Provider) {
 	var s *discordgo.Session
 
 	token, err := env.GetEnv("token", "BOT_TOKEN")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	id, err := env.GetEnv("id", "BOT_ID")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	secret, err := env.GetEnv("secret", "BOT_SECRET")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -82,8 +34,6 @@ func RunBot(dbProvider db.Provider) {
 		log.Fatalf("Invalid bot parameters: %v", err)
 	}
 	// log.Println("Exiting init")
-
-	conf := oath_config(id, secret)
 
 	commands := []*discordgo.ApplicationCommand{
 		{
@@ -102,8 +52,6 @@ func RunBot(dbProvider db.Provider) {
 
 			userID := i.Interaction.Member.User.ID
 			guildID := i.Interaction.GuildID
-
-			oauth_login(conf)
 
 			content := create_event(userID, guildID, dbProvider)
 

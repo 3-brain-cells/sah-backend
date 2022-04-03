@@ -3,10 +3,12 @@ package events
 import (
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"time"
 
 	"github.com/3-brain-cells/sah-backend/db"
+	"github.com/3-brain-cells/sah-backend/env"
 	"github.com/3-brain-cells/sah-backend/types"
 	"github.com/3-brain-cells/sah-backend/util"
 	"github.com/go-chi/chi"
@@ -21,6 +23,18 @@ func Routes(database db.Provider) *chi.Mux {
 	// GET /{eventID}/voteoptions ==> GetVoteOptions() ==> get the voting options from the database
 	// POST /{eventID}/votes ==> PostVotes() ==> OAUTH also ==> post the votes to the database
 	// router.Put("/", CreatePartialEvent(database))
+	clientID, err := env.GetEnv("token", "BOT_ID")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	secret, err := env.GetEnv("token", "BOT_SECRET")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	oath_config(clientID, secret, router)
+
 	router.Put("/{id}", PopulateEvent(database))
 	router.Get("/{id}/vote_options", GetVoteOptions(database))
 	router.Post("/{id}/votes", PostVotes(database))
@@ -72,8 +86,6 @@ type populateEventRequestBody struct {
 // need to confirm that the user who is populating the event is the same as the user who created the event
 func PopulateEvent(eventProvider db.EventProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// TODO authentication, get this user's ID (or maybe don't for demo)
-		userID := ""
 
 		id := chi.URLParam(r, "id")
 		if id == "" {
