@@ -20,14 +20,22 @@ type EventProvider interface {
 	GetSingle(ctx context.Context, eventID string) (*types.Event, error)
 
 	// Create creates a new partial event (before it is populated)
-	CreatePartial(ctx context.Context, event types.EventCreate) error
+	CreatePartial(ctx context.Context, event types.Event) error
 
-	// populate the created event with other fields
-	PopulateEvent(ctx context.Context, event types.Event) error
+	// pass in a partial event struct
+	// ignore the following fields:
+	// - creatorID
+	// - guildID
+	// - eventID
+	// - populated
+	// - voteOptions
+	// - userVotes
+	// If userID is not the creator ID of the event, an error is returned.
+	PopulateEvent(ctx context.Context, event types.Event, userID string) error
 
 	// Update updates an existing event
 	PostVotes(ctx context.Context, votes types.UserVotes, eventID string) error
 
 	// Delete deletes an existing event
-	Delete(ctx context.Context, eventID int) error
+	// Delete(ctx context.Context, eventID int) error
 }

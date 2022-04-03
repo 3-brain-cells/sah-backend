@@ -1,61 +1,78 @@
 package bot
 
 import (
+	"context"
 	"flag"
 	"log"
 	"os"
 	"os/signal"
 
+	"github.com/3-brain-cells/sah-backend/db"
 	"github.com/3-brain-cells/sah-backend/env"
 	"github.com/bwmarrin/discordgo"
 )
 
 // Bot parameters
 var (
-	GuildID = flag.String("guild", "", "Test guild ID. If not passed - bot registers commands globally")
-	// AppID          = flag.String("appid", "", "Bot app ID")
-	// BotToken       = flag.String("token", "", "Bot access token")
+	GuildID        = flag.String("guild", "", "Test guild ID. If not passed - bot registers commands globally")
 	RemoveCommands = flag.Bool("rmcmd", false, "Remove all commands after shutdowning or not")
 )
 
+// Constraints (make function similar to):
+func ExampleRunFunction(ctx context.Context, dbProvider db.Provider) error { return nil }
+
 // permissions 397284730944
 
-var (
-	integerOptionMinValue = 1.0
+// var (
+// 	integerOptionMinValue = 1.0
 
-	commands = []*discordgo.ApplicationCommand{
-		{
-			Name:        "create-event",
-			Description: "Command to create an event",
-		},
-	}
-	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
-		"create-event": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			/* TODO
-			call create_event function
-				- should read the user (i.Interaction.User.Username) that calls the function
-				- should return the event link
-				- update the GuildID:UserID:Link to database
-			*/
+// 	commands = []*discordgo.ApplicationCommand{
+// 		{
+// 			Name:        "create-event",
+// 			Description: "Command to create an event",
+// 		},
+// 	}
+// 	commandHandlers = map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+// 		"create-event": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+// 			/* TODO
+// 			call create_event function
+// 				- should read the user (i.Interaction.User.Username) that calls the function
+// 				- should return the event link
+// 				- update the GuildID:UserID:Link to database
+// 			*/
 
-			// get the user that calls the function
-			userName := i.Interaction.Member.User.ID
-			// createEvent()
+// 			userID := i.Interaction.Member.User.ID
+// 			guildID := i.Interaction.GuildID
 
-			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
-				Type: discordgo.InteractionResponseChannelMessageWithSource,
-				Data: &discordgo.InteractionResponseData{
-					Content: userName,
-				},
-			})
-		},
-	}
-)
+// 			// TODO: fix
+// 			oauth_login(conf);
 
-func RunBot() {
+// 			content := create_event(userID, guildID, _)
+
+// 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+// 				Type: discordgo.InteractionResponseChannelMessageWithSource,
+// 				Data: &discordgo.InteractionResponseData{
+// 					Content: content,
+// 				},
+// 			})
+// 		},
+// 	}
+// )
+
+func RunBot(dbProvider db.Provider) {
 	var s *discordgo.Session
 
 	token, err := env.GetEnv("token", "BOT_TOKEN")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	id, err := env.GetEnv("id", "BOT_ID")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	secret, err := env.GetEnv("secret", "BOT_SECRET")
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -65,6 +82,39 @@ func RunBot() {
 		log.Fatalf("Invalid bot parameters: %v", err)
 	}
 	// log.Println("Exiting init")
+
+	conf := oath_config(id, secret)
+
+	commands := []*discordgo.ApplicationCommand{
+		{
+			Name:        "create-event",
+			Description: "Command to create an event",
+		},
+	}
+	commandHandlers := map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
+		"create-event": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+			/* TODO
+			call create_event function
+				- should read the user (i.Interaction.User.Username) that calls the function
+				- should return the event link
+				- update the GuildID:UserID:Link to database
+			*/
+
+			userID := i.Interaction.Member.User.ID
+			guildID := i.Interaction.GuildID
+
+			oauth_login(conf)
+
+			content := create_event(userID, guildID, dbProvider)
+
+			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
+				Type: discordgo.InteractionResponseChannelMessageWithSource,
+				Data: &discordgo.InteractionResponseData{
+					Content: content,
+				},
+			})
+		},
+	}
 
 	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {

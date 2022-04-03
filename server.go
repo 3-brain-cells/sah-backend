@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/3-brain-cells/sah-backend/db"
 	"github.com/3-brain-cells/sah-backend/db/mongo"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
@@ -21,7 +22,7 @@ import (
 // resources used at runtime that each have
 // a lifecycle of initialization, connection, and disconnection
 type APIServer struct {
-	dbProvider *mongo.Provider
+	dbProvider db.Provider
 	logger     zerolog.Logger
 }
 

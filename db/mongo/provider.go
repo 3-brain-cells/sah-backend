@@ -2,6 +2,7 @@ package mongo
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"time"
 
@@ -28,6 +29,9 @@ type Provider struct {
 	clusterName   string
 	client        *mongo.Client
 }
+
+// Make sure Provider implements db.Provider
+var _ db.Provider = &Provider{}
 
 // NewProvider creates a new provider and loads values in from the environment
 func NewProvider(logger zerolog.Logger) (*Provider, error) {
@@ -138,7 +142,7 @@ func (p *Provider) GetSingle(ctx context.Context, eventID string) (*types.Event,
 	return &event, nil
 }
 
-func (p *Provider) CreatePartial(ctx context.Context, event types.EventCreate) error {
+func (p *Provider) CreatePartial(ctx context.Context, event types.Event) error {
 	collection := p.events()
 	_, err := collection.InsertOne(ctx, event)
 	if err != nil {
@@ -150,10 +154,54 @@ func (p *Provider) CreatePartial(ctx context.Context, event types.EventCreate) e
 	return nil
 }
 
-func (p *Provider) PopulateEvent(ctx context.Context, event types.Event) error {
-	// create a new permanent event
+// Update updates an existing event
+func (p *Provider) PopulateEvent(ctx context.Context, event types.Event, userID string) error {
 	collection := p.events()
-	_, err := collection.InsertOne(ctx, event)
+
+	// new locations
+	locOne := types.Location{
+		Name:    "location one",
+		Address: "address one",
+	}
+	locTwo := types.Location{
+		Name:    "location two",
+		Address: "address two",
+	}
+	event.VoteOptions.Location = []types.Location{locOne, locTwo}
+
+	// new times: TOOD: put this in the range of the event
+	timeOne := types.TimePair{
+		Start: time.Now(),
+		End:   time.Now(),
+	}
+	event.VoteOptions.StartEndPairs = []types.TimePair{timeOne}
+
+	// new random times within the limits
+
+	// TODO check userID is the creator of the event
+
+	// serialize to a string JSON
+	eventJSON, err := json.Marshal(event)
+	if err != nil {
+		return err
+	}
+	// deserialize that string into a map[string]interface{}
+	mmap := make(map[string]interface{})
+	err = json.Unmarshal(eventJSON, &mmap)
+	if err != nil {
+		return err
+	}
+
+	updateDocument := bson.D{}
+	for k, v := range mmap {
+		updateDocument = append(updateDocument, bson.E{Key: k, Value: v})
+	}
+
+	filter := bson.D{{Key: "id", Value: event.EventID}}
+	updateQuery := bson.D{{Key: "$set", Value: updateDocument}}
+
+	_, err = collection.UpdateOne(ctx, filter, updateQuery)
+
 	if err != nil {
 		if writeException, ok := err.(mongo.WriteException); ok && isDuplicate(writeException) {
 			return db.NewDuplicateIDError(event.EventID)
