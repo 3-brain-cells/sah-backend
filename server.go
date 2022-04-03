@@ -7,6 +7,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/3-brain-cells/sah-backend/api/events"
 	"github.com/3-brain-cells/sah-backend/db"
 	"github.com/3-brain-cells/sah-backend/db/mongo"
 	"github.com/go-chi/chi"
@@ -127,26 +128,13 @@ func (a *APIServer) routes() *chi.Mux {
 	// ==============================
 	// Add all routes to the API here
 	// ==============================
-	router.Route("/v1", func(r chi.Router) {
-		// Public routes
-		r.Group(func(r chi.Router) {
-			// Can be used for health checks
-			r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
-				w.WriteHeader(204)
-			})
-
-			// r.Mount("/auth", apiAuth.Routes(a.casProvider, a.dbProvider, a.jwtManager))
+	router.Route("/api/v1", func(r chi.Router) {
+		// Can be used for health checks
+		r.Get("/health", func(w http.ResponseWriter, r *http.Request) {
+			w.WriteHeader(204)
 		})
 
-		// Protected routes
-		// r.Group(func(r chi.Router) {
-		// Seek, verify and validate JWT tokens,
-		// sending appropriate status codes upon failure.
-		// Note that this does not perform *authorization* checks involving perms;
-		// if needed, use auth.AdminAuthenticator to use Permissions.AdminAccess
-
-		// r.Mount("/announcements", announcements.Routes(a.dbProvider))
-		// })
+		r.Mount("/events", events.Routes(a.dbProvider))
 	})
 
 	return router
