@@ -26,7 +26,6 @@ type EventProvider interface {
 	// ignore the following fields:
 	// - creatorID
 	// - guildID
-	// - eventID
 	// - populated
 	// - voteOptions
 	// - userVotes

@@ -155,6 +155,12 @@ func (p *Provider) CreatePartial(ctx context.Context, event types.Event) error {
 }
 
 // Update updates an existing event
+// Ignore the following fields:
+// - creatorID
+// - guildID
+// - populated
+// - voteOptions
+// - userVotes
 func (p *Provider) PopulateEvent(ctx context.Context, event types.Event, userID string) error {
 	collection := p.events()
 
@@ -169,7 +175,7 @@ func (p *Provider) PopulateEvent(ctx context.Context, event types.Event, userID 
 	}
 	event.VoteOptions.Location = []types.Location{locOne, locTwo}
 
-	// new times: TOOD: put this in the range of the event
+	// new times: TODO: put this in the range of the event
 	timeOne := types.TimePair{
 		Start: time.Now(),
 		End:   time.Now(),
@@ -194,6 +200,15 @@ func (p *Provider) PopulateEvent(ctx context.Context, event types.Event, userID 
 
 	updateDocument := bson.D{}
 	for k, v := range mmap {
+		// Don't update the following fields:
+		// - EventID
+		// - CreatorID
+		// - GuildID
+		// - Populated
+		// - UserVotes
+		if k == "id" || k == "creator_id" || k == "guild_id" || k == "populated" || k == "user_votes" {
+			continue
+		}
 		updateDocument = append(updateDocument, bson.E{Key: k, Value: v})
 	}
 

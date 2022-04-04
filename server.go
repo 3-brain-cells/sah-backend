@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/3-brain-cells/sah-backend/api/events"
+	"github.com/3-brain-cells/sah-backend/api/oauth"
 	"github.com/3-brain-cells/sah-backend/db"
 	"github.com/3-brain-cells/sah-backend/db/mongo"
 	"github.com/go-chi/chi"
@@ -136,6 +137,7 @@ func (a *APIServer) routes() *chi.Mux {
 
 		r.Mount("/events", events.Routes(a.dbProvider))
 	})
+	router.Mount("/", oauth.Routes(a.dbProvider))
 
 	return router
 }
@@ -149,7 +151,7 @@ func (a *APIServer) corsMiddleware() func(http.Handler) http.Handler {
 
 	return cors.Handler(cors.Options{
 		AllowedOrigins:   []string{allowedOrigins},
-		AllowedMethods:   []string{"GET", "POST", "PATCH", "DELETE", "OPTIONS"},
+		AllowedMethods:   []string{"GET", "PUT", "POST", "PATCH", "DELETE", "OPTIONS"},
 		AllowedHeaders:   []string{"Accept", "Authorization", "Content-Type"},
 		ExposedHeaders:   []string{},
 		AllowCredentials: false,

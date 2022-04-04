@@ -8,7 +8,6 @@ import (
 	"time"
 
 	"github.com/3-brain-cells/sah-backend/db"
-	"github.com/3-brain-cells/sah-backend/env"
 	"github.com/3-brain-cells/sah-backend/types"
 	"github.com/3-brain-cells/sah-backend/util"
 	"github.com/go-chi/chi"
@@ -23,23 +22,32 @@ func Routes(database db.Provider) *chi.Mux {
 	// GET /{eventID}/voteoptions ==> GetVoteOptions() ==> get the voting options from the database
 	// POST /{eventID}/votes ==> PostVotes() ==> OAUTH also ==> post the votes to the database
 	// router.Put("/", CreatePartialEvent(database))
-	clientID, err := env.GetEnv("token", "BOT_ID")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	secret, err := env.GetEnv("token", "BOT_SECRET")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	oath_config(clientID, secret, router)
 
 	router.Put("/{id}", PopulateEvent(database))
 	router.Get("/{id}/vote_options", GetVoteOptions(database))
 	router.Post("/{id}/votes", PostVotes(database))
 
 	return router
+}
+
+type GetVoteOptionsResponseBody struct {
+	Times     []GetVoteOptionsTime     `json:"times"`
+	Locations []GetVoteOptionsLocation `json:"locations"`
+}
+
+type GetVoteOptionsTime struct {
+	Start     time.Time `json:"start"`
+	End       time.Time `json:"end"`
+	Available []string  `json:"available"`
+}
+
+type GetVoteOptionsLocation struct {
+	Name                    string  `json:"names"`
+	YelpURL                 string  `json:"yelpUrl"`
+	Stars                   float64 `json:"stars"`
+	DistanceFromCurrentUser float64 `json:"distanceFromCurrentUser"`
+	PreviewImageURL         string  `json:"previewImageUrl"`
+	Address                 string  `json:"address"`
 }
 
 // gets the current events voting options
@@ -58,8 +66,33 @@ func GetVoteOptions(eventProvider db.EventProvider) http.HandlerFunc {
 			return
 		}
 
+		// Convert the data to GetVoteOptionsResponseBody
+		responseTimes := make([]GetVoteOptionsTime, len(event.VoteOptions.StartEndPairs))
+		for i, time := range event.VoteOptions.StartEndPairs {
+			responseTimes[i] = GetVoteOptionsTime{
+				Start:     time.Start,
+				End:       time.End,
+				Available: []string{},
+			}
+		}
+		responseLocations := make([]GetVoteOptionsLocation, len(event.VoteOptions.Location))
+		for i, location := range event.VoteOptions.Location {
+			responseLocations[i] = GetVoteOptionsLocation{
+				Name:                    location.Name,
+				YelpURL:                 "",
+				Stars:                   4,
+				DistanceFromCurrentUser: 8,
+				PreviewImageURL:         "",
+				Address:                 location.Address,
+			}
+		}
+		responseBody := GetVoteOptionsResponseBody{
+			Times:     responseTimes,
+			Locations: responseLocations,
+		}
+
 		// Return the single announcement as the top-level JSON
-		jsonResponse, err := json.Marshal(event.VoteOptions)
+		jsonResponse, err := json.Marshal(&responseBody)
 		if err != nil {
 			util.ErrorWithCode(r, w, err, http.StatusInternalServerError)
 			return
@@ -72,6 +105,7 @@ func GetVoteOptions(eventProvider db.EventProvider) http.HandlerFunc {
 }
 
 type populateEventRequestBody struct {
+	UserID           string                 `json:"user_id"`
 	Title            string                 `json:"title"`
 	Description      string                 `json:"description"`
 	EarliestDate     time.Time              `json:"earliest_date"` // ISO 8601 string
@@ -106,11 +140,11 @@ func PopulateEvent(eventProvider db.EventProvider) http.HandlerFunc {
 		// ignore the following fields:
 		// - creatorID
 		// - guildID
-		// - eventID
 		// - populated
 		// - voteOptions
 		// - userVotes
 		partialEvent := types.Event{
+			EventID:          id,
 			Title:            body.Title,
 			Description:      body.Description,
 			EarliestDate:     body.EarliestDate,
@@ -122,7 +156,8 @@ func PopulateEvent(eventProvider db.EventProvider) http.HandlerFunc {
 			LocationCategory: body.LocationCategory,
 		}
 
-		err = eventProvider.PopulateEvent(r.Context(), partialEvent /*userID*/, "")
+		log.Printf("PopulateEvent event_id=%s user_id=%s", id, body.UserID)
+		err = eventProvider.PopulateEvent(r.Context(), partialEvent, body.UserID)
 		if err != nil {
 			util.Error(r, w, err)
 			return
@@ -133,16 +168,14 @@ func PopulateEvent(eventProvider db.EventProvider) http.HandlerFunc {
 }
 
 type postVotesRequestBody struct {
-	LocationVotes []int `json:"location_votes"`
-	TimeVotes     []int `json:"time_votes"`
+	UserID        string `json:"user_id"`
+	LocationVotes []int  `json:"location_votes"`
+	TimeVotes     []int  `json:"time_votes"`
 }
 
 // need to confirm that who is putting is in the Guild and has not already voted
 func PostVotes(eventProvider db.EventProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		// TODO authentication, get this user's ID (or maybe don't for demo)
-		userID := ""
-
 		id := chi.URLParam(r, "id")
 		if id == "" {
 			util.ErrorWithCode(r, w, errors.New("the URL parameter is empty"),
@@ -157,8 +190,9 @@ func PostVotes(eventProvider db.EventProvider) http.HandlerFunc {
 			return
 		}
 
+		log.Printf("PostVotes event_id=%s user_id=%s", id, body.UserID)
 		err = eventProvider.PostVotes(r.Context(), types.UserVotes{
-			UserID:        userID,
+			UserID:        body.UserID,
 			LocationVotes: body.LocationVotes,
 			TimeVotes:     body.TimeVotes,
 		}, id)

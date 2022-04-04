@@ -3,7 +3,6 @@ package bot
 import (
 	"context"
 	"fmt"
-	"time"
 
 	"github.com/3-brain-cells/sah-backend/db"
 	"github.com/3-brain-cells/sah-backend/types"
@@ -37,12 +36,12 @@ func create_event(userID string, guildID string, eventProvider db.EventProvider)
 
 	event := types.Event{CreatorID: userID, GuildID: guildID, EventID: eventID}
 
-	// todo, fix the context
-	ctx, _ := context.WithTimeout(context.Background(), 1000*time.Millisecond)
+	ctx := context.Background()
 
 	err := eventProvider.CreatePartial(ctx, event)
 	if err != nil {
-		return "try again"
+		fmt.Println("Error creating event: ", err)
+		// return "try again"
 	}
-	return fmt.Sprintf("https://sah-hangout.com/%v", eventID)
+	return fmt.Sprintf("https://super-auto-hangouts.netlify.app/new/%v", eventID)
 }
