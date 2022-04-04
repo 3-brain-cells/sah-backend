@@ -56,6 +56,10 @@ func main() {
 	logger.Info().Str("BOT_TOKEN", os.Getenv("BOT_TOKEN")).Msg("BOT_TOKEN")
 	logger.Info().Str("MONGO_DB_USERNAME", os.Getenv("MONGO_DB_USERNAME")).Msg("MONGO_DB_USERNAME")
 
+	api, err := NewAPIServer(logger)
+	if err != nil {
+		stdlog.Panicf("error: %v", err)
+	}
 	// Set up the bot
-	bot.RunBot()
+	bot.RunBot(api.dbProvider)
 }

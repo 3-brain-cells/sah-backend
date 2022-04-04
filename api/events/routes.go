@@ -122,7 +122,7 @@ func PopulateEvent(eventProvider db.EventProvider) http.HandlerFunc {
 			LocationCategory: body.LocationCategory,
 		}
 
-		err = eventProvider.PopulateEvent(r.Context(), partialEvent, userID)
+		err = eventProvider.PopulateEvent(r.Context(), partialEvent /*userID*/, "")
 		if err != nil {
 			util.Error(r, w, err)
 			return
