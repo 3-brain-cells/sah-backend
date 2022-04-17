@@ -1,4 +1,4 @@
-package ignore
+package types
 
 type LocationResponse struct {
 	EventID   int     `json:"eventID"`
@@ -6,4 +6,9 @@ type LocationResponse struct {
 	Latitude  float32 `json:"latitude"`
 	Longitude float32 `json:"longitude"`
 	Address   string  `json:"address"`
+}
+
+type Coordinates struct {
+	Latitude  float32 `json:"latitude"`
+	Longitude float32 `json:"longitude"`
 }
