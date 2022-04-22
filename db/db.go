@@ -35,6 +35,9 @@ type EventProvider interface {
 	// Update updates an existing event
 	PostVotes(ctx context.Context, votes types.UserVotes, eventID string) error
 
+	// PutAvailability updates the user availability
+	PutAvailability(ctx context.Context, availability types.UserAvailability, eventID string) error
+
 	// Delete deletes an existing event
 	// Delete(ctx context.Context, eventID int) error
 }

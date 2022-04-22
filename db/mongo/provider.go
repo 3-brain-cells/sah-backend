@@ -272,3 +272,13 @@ func isDuplicate(writeException mongo.WriteException) bool {
 
 	return false
 }
+
+
+func (p *Provider) PutAvailability(ctx context.Context, availability types.UserAvailability, eventID string) error {
+	// TODO implement :)
+	// Note: we probably want to change both availability and votes
+	// to use map[string][...] where the key is the user ID
+	// to make it trivial to upsert the new availability/vote into the event's map
+	// as a single operation
+	return nil
+}

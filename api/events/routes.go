@@ -26,6 +26,8 @@ func Routes(database db.Provider) *chi.Mux {
 	router.Put("/{id}", PopulateEvent(database))
 	router.Get("/{id}/vote_options", GetVoteOptions(database))
 	router.Post("/{id}/votes", PostVotes(database))
+	router.Get("/{id}/availability/info", GetAvailabilityInfo(database))
+	router.Put("/{id}/availability/{user_id}", PutAvailability(database))
 
 	return router
 }
@@ -195,6 +197,99 @@ func PostVotes(eventProvider db.EventProvider) http.HandlerFunc {
 			UserID:        body.UserID,
 			LocationVotes: body.LocationVotes,
 			TimeVotes:     body.TimeVotes,
+		}, id)
+		if err != nil {
+			util.Error(r, w, err)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
+	}
+}
+
+type getAvailabilityInfoResponseBody struct {
+	EarliestDate     time.Time        `json:"earliest_date"` // ISO 8601 string
+	LatestDate       time.Time        `json:"latest_date"`     // ISO 8601 string
+	StartTimeHour    int              `json:"start_time_hour"`
+	StartTimeMinute  int              `json:"start_time_minute"`
+	EndTimeHour      int              `json:"end_time_hour"`
+	EndTimeMinute    int              `json:"end_time_minute"`
+}
+
+func GetAvailabilityInfo(eventProvider db.EventProvider) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		if id == "" {
+			util.ErrorWithCode(r, w, errors.New("the URL parameter is empty"),
+				http.StatusBadRequest)
+			return
+		}
+
+		log.Printf("GetAvailabilityInfo event_id=%s", id)
+		event, err := eventProvider.GetSingle(r.Context(), id)
+		if err != nil {
+			util.Error(r, w, err)
+			return
+		}
+		if event == nil {
+			util.ErrorWithCode(r, w, errors.New("event not found"),
+				http.StatusNotFound)
+			return
+		}
+
+		responseBody := getAvailabilityInfoResponseBody{
+			EarliestDate:     event.EarliestDate,
+			LatestDate:       event.LatestDate,
+			StartTimeHour:    event.StartTimeHour,
+			StartTimeMinute:  event.StartTimeMinute,
+			EndTimeHour:      event.EndTimeHour,
+			EndTimeMinute:    event.EndTimeMinute,
+		}
+
+		// Return the single announcement as the top-level JSON
+		jsonResponse, err := json.Marshal(&responseBody)
+		if err != nil {
+			util.ErrorWithCode(r, w, err, http.StatusInternalServerError)
+			return
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		w.Write(jsonResponse)
+	}
+}
+
+type putAvailabilityRequestBody struct {
+	Days []types.DayAvailability `json:"days"`
+}
+
+func PutAvailability(eventProvider db.EventProvider) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		if id == "" {
+			util.ErrorWithCode(r, w, errors.New("the event ID URL parameter is empty"),
+				http.StatusBadRequest)
+			return
+		}
+
+		userID := chi.URLParam(r, "user_id")
+		if userID == "" {
+			util.ErrorWithCode(r, w, errors.New("the user ID URL parameter is empty"),
+				http.StatusBadRequest)
+			return
+		}
+
+		var body putAvailabilityRequestBody
+		err := json.NewDecoder(r.Body).Decode(&body)
+		if err != nil {
+			util.ErrorWithCode(r, w, err, http.StatusBadRequest)
+			return
+		}
+
+		log.Printf("PutAvailability event_id=%s user_id=%s", id, userID)
+		err = eventProvider.PutAvailability(r.Context(), types.UserAvailability{
+			UserID: userID,
+			DayAvailability: body.Days,
 		}, id)
 		if err != nil {
 			util.Error(r, w, err)

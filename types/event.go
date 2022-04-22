@@ -23,6 +23,7 @@ type Event struct {
 
 	Populated   bool        `json:"populated" bson:"populated"`       // field is set once creator goes on web and populates
 	VoteOptions VoteOption  `json:"vote_options" bson:"vote_options"` // ^ not done until this is done
+	UserAvailability []UserAvailability `json:"user_availability" bson:"user_availability"` // ^ not done until this is done
 	UserVotes   []UserVotes `json:"user_votes" bson:"user_votes"`     // ^ not done until this is done
 }
 
@@ -45,6 +46,23 @@ type UserVotes struct {
 	UserID        string `json:"userID" bson:"userID"`
 	LocationVotes []int  `json:"locationVotes" bson:"locationVotes"`
 	TimeVotes     []int  `json:"timeVotes" bson:"timeVotes"`
+}
+
+type UserAvailability struct {
+	UserID string `json:"user_id" bson:"user_id"`
+	DayAvailability []DayAvailability `json:"day_availability" bson:"day_availability"`
+}
+
+type DayAvailability struct {
+	Date time.Time `json:"date" bson:"date"` // ISO 8601 string
+	AvailableBlocks []AvailabilityBlock `json:"available_blocks" bson:"available_blocks"`
+}
+
+type AvailabilityBlock struct {
+	StartHour int `json:"start_hour" bson:"start_hour"`
+	StartMinute int `json:"start_minute" bson:"start_minute"`
+	EndHour int `json:"end_hour" bson:"end_hour"`
+	EndMinute int `json:"end_minute" bson:"end_minute"`
 }
 
 type LocationCategory string
