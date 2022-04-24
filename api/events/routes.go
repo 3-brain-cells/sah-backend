@@ -208,12 +208,12 @@ func PostVotes(eventProvider db.EventProvider) http.HandlerFunc {
 }
 
 type getAvailabilityInfoResponseBody struct {
-	EarliestDate     time.Time        `json:"earliest_date"` // ISO 8601 string
-	LatestDate       time.Time        `json:"latest_date"`     // ISO 8601 string
-	StartTimeHour    int              `json:"start_time_hour"`
-	StartTimeMinute  int              `json:"start_time_minute"`
-	EndTimeHour      int              `json:"end_time_hour"`
-	EndTimeMinute    int              `json:"end_time_minute"`
+	EarliestDate    time.Time `json:"earliest_date"` // ISO 8601 string
+	LatestDate      time.Time `json:"latest_date"`   // ISO 8601 string
+	StartTimeHour   int       `json:"start_time_hour"`
+	StartTimeMinute int       `json:"start_time_minute"`
+	EndTimeHour     int       `json:"end_time_hour"`
+	EndTimeMinute   int       `json:"end_time_minute"`
 }
 
 func GetAvailabilityInfo(eventProvider db.EventProvider) http.HandlerFunc {
@@ -238,12 +238,12 @@ func GetAvailabilityInfo(eventProvider db.EventProvider) http.HandlerFunc {
 		}
 
 		responseBody := getAvailabilityInfoResponseBody{
-			EarliestDate:     event.EarliestDate,
-			LatestDate:       event.LatestDate,
-			StartTimeHour:    event.StartTimeHour,
-			StartTimeMinute:  event.StartTimeMinute,
-			EndTimeHour:      event.EndTimeHour,
-			EndTimeMinute:    event.EndTimeMinute,
+			EarliestDate:    event.EarliestDate,
+			LatestDate:      event.LatestDate,
+			StartTimeHour:   event.StartTimeHour,
+			StartTimeMinute: event.StartTimeMinute,
+			EndTimeHour:     event.EndTimeHour,
+			EndTimeMinute:   event.EndTimeMinute,
 		}
 
 		// Return the single announcement as the top-level JSON
@@ -288,7 +288,7 @@ func PutAvailability(eventProvider db.EventProvider) http.HandlerFunc {
 
 		log.Printf("PutAvailability event_id=%s user_id=%s", id, userID)
 		err = eventProvider.PutAvailability(r.Context(), types.UserAvailability{
-			UserID: userID,
+			UserID:          userID,
 			DayAvailability: body.Days,
 		}, id)
 		if err != nil {
@@ -298,4 +298,8 @@ func PutAvailability(eventProvider db.EventProvider) http.HandlerFunc {
 
 		w.WriteHeader(http.StatusCreated)
 	}
+}
+
+func FindAvailability(userAvailability types.UserAvailability) {
+
 }

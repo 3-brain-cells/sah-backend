@@ -273,12 +273,45 @@ func isDuplicate(writeException mongo.WriteException) bool {
 	return false
 }
 
-
 func (p *Provider) PutAvailability(ctx context.Context, availability types.UserAvailability, eventID string) error {
 	// TODO implement :)
 	// Note: we probably want to change both availability and votes
 	// to use map[string][...] where the key is the user ID
 	// to make it trivial to upsert the new availability/vote into the event's map
 	// as a single operation
+
+	collection := p.events()
+
+	mmap := make(map[string]interface{})
+	mmap[availability.UserID] = availability.DayAvailability
+
+	// create userID -> availability
+	availabilityJSON, err := json.Marshal(mmap)
+	if err != nil {
+		return err
+	}
+	// deserialize that string into a map[string]interface{}
+	mmap = make(map[string]interface{})
+	err = json.Unmarshal(availabilityJSON, &mmap)
+	if err != nil {
+		return err
+	}
+
+	updateDocument := bson.D{}
+	for k, v := range mmap {
+		updateDocument = append(updateDocument, bson.E{Key: k, Value: v})
+	}
+
+	filter := bson.D{{Key: "id", Value: eventID}}
+	updateQuery := bson.D{{Key: "$set", Value: updateDocument}}
+
+	_, err = collection.UpdateOne(ctx, filter, updateQuery)
+
+	if err != nil {
+		if writeException, ok := err.(mongo.WriteException); ok && isDuplicate(writeException) {
+			return db.NewDuplicateIDError(eventID)
+		}
+		return err
+	}
 	return nil
 }
