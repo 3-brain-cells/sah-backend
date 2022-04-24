@@ -107,16 +107,17 @@ func GetVoteOptions(eventProvider db.EventProvider) http.HandlerFunc {
 }
 
 type populateEventRequestBody struct {
-	UserID           string                 `json:"user_id"`
-	Title            string                 `json:"title"`
-	Description      string                 `json:"description"`
-	EarliestDate     time.Time              `json:"earliest_date"` // ISO 8601 string
-	LatestDate       time.Time              `json:"latest_date"`   // ISO 8601 string
-	StartTimeHour    int                    `json:"start_time_hour"`
-	StartTimeMinute  int                    `json:"start_time_minute"`
-	EndTimeHour      int                    `json:"end_time_hour"`
-	EndTimeMinute    int                    `json:"end_time_minute"`
-	LocationCategory types.LocationCategory `json:"location_category"`
+	UserID             string                 `json:"user_id"`
+	Title              string                 `json:"title"`
+	Description        string                 `json:"description"`
+	EarliestDate       time.Time              `json:"earliest_date"` // ISO 8601 string
+	LatestDate         time.Time              `json:"latest_date"`   // ISO 8601 string
+	StartTimeHour      int                    `json:"start_time_hour"`
+	StartTimeMinute    int                    `json:"start_time_minute"`
+	EndTimeHour        int                    `json:"end_time_hour"`
+	EndTimeMinute      int                    `json:"end_time_minute"`
+	LocationCategory   types.LocationCategory `json:"location_category"`
+	SwitchToVotingTime time.Time              `json:"switch_to_voting"` // ISO 8601 string, TODO
 }
 
 // need to confirm that the user who is populating the event is the same as the user who created the event
@@ -137,6 +138,9 @@ func PopulateEvent(eventProvider db.EventProvider) http.HandlerFunc {
 			return
 		}
 
+		// add the field that switches from filling out schedule to voting
+		body.SwitchToVotingTime = time.Now().Add(time.Until(body.EarliestDate) / 2)
+
 		// Create the partial event struct.
 		// From the provider interface:
 		// ignore the following fields:
@@ -146,16 +150,17 @@ func PopulateEvent(eventProvider db.EventProvider) http.HandlerFunc {
 		// - voteOptions
 		// - userVotes
 		partialEvent := types.Event{
-			EventID:          id,
-			Title:            body.Title,
-			Description:      body.Description,
-			EarliestDate:     body.EarliestDate,
-			LatestDate:       body.LatestDate,
-			StartTimeHour:    body.StartTimeHour,
-			StartTimeMinute:  body.StartTimeMinute,
-			EndTimeHour:      body.EndTimeHour,
-			EndTimeMinute:    body.EndTimeMinute,
-			LocationCategory: body.LocationCategory,
+			EventID:            id,
+			Title:              body.Title,
+			Description:        body.Description,
+			EarliestDate:       body.EarliestDate,
+			LatestDate:         body.LatestDate,
+			StartTimeHour:      body.StartTimeHour,
+			StartTimeMinute:    body.StartTimeMinute,
+			EndTimeHour:        body.EndTimeHour,
+			EndTimeMinute:      body.EndTimeMinute,
+			LocationCategory:   body.LocationCategory,
+			SwitchToVotingTime: body.SwitchToVotingTime,
 		}
 
 		log.Printf("PopulateEvent event_id=%s user_id=%s", id, body.UserID)
@@ -208,12 +213,12 @@ func PostVotes(eventProvider db.EventProvider) http.HandlerFunc {
 }
 
 type getAvailabilityInfoResponseBody struct {
-	EarliestDate     time.Time        `json:"earliest_date"` // ISO 8601 string
-	LatestDate       time.Time        `json:"latest_date"`     // ISO 8601 string
-	StartTimeHour    int              `json:"start_time_hour"`
-	StartTimeMinute  int              `json:"start_time_minute"`
-	EndTimeHour      int              `json:"end_time_hour"`
-	EndTimeMinute    int              `json:"end_time_minute"`
+	EarliestDate    time.Time `json:"earliest_date"` // ISO 8601 string
+	LatestDate      time.Time `json:"latest_date"`   // ISO 8601 string
+	StartTimeHour   int       `json:"start_time_hour"`
+	StartTimeMinute int       `json:"start_time_minute"`
+	EndTimeHour     int       `json:"end_time_hour"`
+	EndTimeMinute   int       `json:"end_time_minute"`
 }
 
 func GetAvailabilityInfo(eventProvider db.EventProvider) http.HandlerFunc {
@@ -238,12 +243,12 @@ func GetAvailabilityInfo(eventProvider db.EventProvider) http.HandlerFunc {
 		}
 
 		responseBody := getAvailabilityInfoResponseBody{
-			EarliestDate:     event.EarliestDate,
-			LatestDate:       event.LatestDate,
-			StartTimeHour:    event.StartTimeHour,
-			StartTimeMinute:  event.StartTimeMinute,
-			EndTimeHour:      event.EndTimeHour,
-			EndTimeMinute:    event.EndTimeMinute,
+			EarliestDate:    event.EarliestDate,
+			LatestDate:      event.LatestDate,
+			StartTimeHour:   event.StartTimeHour,
+			StartTimeMinute: event.StartTimeMinute,
+			EndTimeHour:     event.EndTimeHour,
+			EndTimeMinute:   event.EndTimeMinute,
 		}
 
 		// Return the single announcement as the top-level JSON
@@ -288,7 +293,7 @@ func PutAvailability(eventProvider db.EventProvider) http.HandlerFunc {
 
 		log.Printf("PutAvailability event_id=%s user_id=%s", id, userID)
 		err = eventProvider.PutAvailability(r.Context(), types.UserAvailability{
-			UserID: userID,
+			UserID:          userID,
 			DayAvailability: body.Days,
 		}, id)
 		if err != nil {
