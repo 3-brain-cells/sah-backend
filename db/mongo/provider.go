@@ -273,7 +273,6 @@ func isDuplicate(writeException mongo.WriteException) bool {
 	return false
 }
 
-
 func (p *Provider) PutAvailability(ctx context.Context, availability types.UserAvailability, eventID string) error {
 	// TODO implement :)
 	// Note: we probably want to change both availability and votes
@@ -281,4 +280,24 @@ func (p *Provider) PutAvailability(ctx context.Context, availability types.UserA
 	// to make it trivial to upsert the new availability/vote into the event's map
 	// as a single operation
 	return nil
+}
+
+func (p *Provider) GetAllEvents(ctx context.Context) ([]*types.Event, error) {
+	collection := p.events()
+	cursor, err := collection.Find(ctx, bson.D{{}})
+	if err != nil {
+		return nil, err
+	}
+
+	var events []*types.Event
+	for cursor.Next(ctx) {
+		var event types.Event
+		err := cursor.Decode(&event)
+		if err != nil {
+			return nil, err
+		}
+		events = append(events, &event)
+	}
+
+	return events, nil
 }

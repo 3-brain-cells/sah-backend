@@ -117,7 +117,7 @@ type populateEventRequestBody struct {
 	EndTimeHour        int                    `json:"end_time_hour"`
 	EndTimeMinute      int                    `json:"end_time_minute"`
 	LocationCategory   types.LocationCategory `json:"location_category"`
-	SwitchToVotingTime time.Time              `json:"switch_to_voting"` // ISO 8601 string, TODO
+	SwitchToVotingTime time.Time              `json:"switch_to_voting"` // ISO 8601 string
 }
 
 // need to confirm that the user who is populating the event is the same as the user who created the event
@@ -170,8 +170,12 @@ func PopulateEvent(eventProvider db.EventProvider) http.HandlerFunc {
 			return
 		}
 
+		// create a thread that manages the event
+		go ManageEvent(partialEvent)
+
 		w.WriteHeader(http.StatusCreated)
 	}
+
 }
 
 type postVotesRequestBody struct {
