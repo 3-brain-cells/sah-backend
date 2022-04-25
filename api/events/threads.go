@@ -6,21 +6,28 @@ import (
 	"time"
 
 	"github.com/3-brain-cells/sah-backend/db"
-	"github.com/3-brain-cells/sah-backend/types"
 )
 
 // ManageEvent manages an event after it has been populated
-func ManageEvent(partialEvent types.Event) {
+func ManageEvent(eventProvider db.EventProvider, eventID string) {
 	currentTime := time.Now()
-	if currentTime.Before(partialEvent.SwitchToVotingTime) {
+
+	// get the event associated with the eventID
+	ctx := context.Background()
+	event, err := eventProvider.GetSingle(ctx, eventID)
+	if err != nil {
+		fmt.Println("error getting event: ", err)
+		return
+	}
+	if currentTime.Before(event.SwitchToVotingTime) {
 		// event is currently in scheduling phase
 		// TODO: print out message to tell users to input schedule
-		time.Sleep(partialEvent.SwitchToVotingTime.Sub(currentTime))
+		time.Sleep(event.SwitchToVotingTime.Sub(currentTime))
 	}
-	if currentTime.Before(partialEvent.EarliestDate) {
+	if currentTime.Before(event.EarliestDate) {
 		// TODO: call Varnika's function to calculate best options
 		// TODO: print out message to tell users to vote
-		time.Sleep(partialEvent.EarliestDate.Sub(currentTime))
+		time.Sleep(event.EarliestDate.Sub(currentTime))
 	}
 	// TODO: print final message with hangout time and location
 }
@@ -46,7 +53,7 @@ func Restart(eventProvider db.EventProvider) {
 			// check that it is still before the initial event time
 			if time.Now().Before(event.EarliestDate) {
 				// restart event
-				ManageEvent(*event)
+				ManageEvent(eventProvider, event.EventID)
 			} else {
 				// TODO: remove event if we plan to
 				// eventProvider.DeleteEvent(ctx)

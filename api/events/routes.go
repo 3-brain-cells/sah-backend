@@ -171,7 +171,7 @@ func PopulateEvent(eventProvider db.EventProvider) http.HandlerFunc {
 		}
 
 		// create a thread that manages the event
-		go ManageEvent(partialEvent)
+		go ManageEvent(eventProvider, partialEvent.EventID)
 
 		w.WriteHeader(http.StatusCreated)
 	}
