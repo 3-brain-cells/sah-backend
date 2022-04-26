@@ -10,10 +10,11 @@ import (
 	"github.com/3-brain-cells/sah-backend/db"
 	"github.com/3-brain-cells/sah-backend/types"
 	"github.com/3-brain-cells/sah-backend/util"
+	"github.com/bwmarrin/discordgo"
 	"github.com/go-chi/chi"
 )
 
-func Routes(database db.Provider) *chi.Mux {
+func Routes(database db.Provider, discordSession *discordgo.Session) *chi.Mux {
 	router := chi.NewRouter()
 
 	// create_event ==> CreatePartialEvent() ==>guildID, userID,generate random ID for event ==> put it in to the database
@@ -23,7 +24,7 @@ func Routes(database db.Provider) *chi.Mux {
 	// POST /{eventID}/votes ==> PostVotes() ==> OAUTH also ==> post the votes to the database
 	// router.Put("/", CreatePartialEvent(database))
 
-	router.Put("/{id}", PopulateEvent(database))
+	router.Put("/{id}", PopulateEvent(database, discordSession))
 	router.Get("/{id}/vote_options", GetVoteOptions(database))
 	router.Post("/{id}/votes", PostVotes(database))
 	router.Get("/{id}/availability/info", GetAvailabilityInfo(database))
@@ -121,7 +122,7 @@ type populateEventRequestBody struct {
 }
 
 // need to confirm that the user who is populating the event is the same as the user who created the event
-func PopulateEvent(eventProvider db.EventProvider) http.HandlerFunc {
+func PopulateEvent(eventProvider db.EventProvider, discordSession *discordgo.Session) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 
 		id := chi.URLParam(r, "id")
@@ -171,7 +172,7 @@ func PopulateEvent(eventProvider db.EventProvider) http.HandlerFunc {
 		}
 
 		// create a thread that manages the event
-		go ManageEvent(eventProvider, partialEvent.EventID)
+		go ManageEvent(eventProvider, discordSession, partialEvent.EventID)
 
 		w.WriteHeader(http.StatusCreated)
 	}

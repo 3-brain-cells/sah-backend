@@ -29,12 +29,12 @@ we are not doing any location(Google) or Yelp work
 	- the bot needs to print out the link in the discord and tell people to vote
 */
 
-func create_event(userID string, guildID string, eventProvider db.EventProvider) string {
+func create_event(userID string, guildID string, channelID string, eventProvider db.EventProvider) string {
 
 	// generate an eventID
 	eventID := ksuid.New().String()
 
-	event := types.Event{CreatorID: userID, GuildID: guildID, EventID: eventID}
+	event := types.Event{CreatorID: userID, GuildID: guildID, EventID: eventID, ChannelID: channelID}
 
 	ctx := context.Background()
 

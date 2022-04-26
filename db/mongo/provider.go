@@ -158,6 +158,7 @@ func (p *Provider) CreatePartial(ctx context.Context, event types.Event) error {
 // Ignore the following fields:
 // - creatorID
 // - guildID
+// - channelID
 // - populated
 // - voteOptions
 // - userVotes
@@ -206,7 +207,7 @@ func (p *Provider) PopulateEvent(ctx context.Context, event types.Event, userID 
 		// - GuildID
 		// - Populated
 		// - UserVotes
-		if k == "id" || k == "creator_id" || k == "guild_id" || k == "populated" || k == "user_votes" {
+		if k == "id" || k == "creator_id" || k == "guild_id" || k == "populated" || k == "user_votes" || k == "channel_id" {
 			continue
 		}
 		updateDocument = append(updateDocument, bson.E{Key: k, Value: v})

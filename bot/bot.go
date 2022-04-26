@@ -8,7 +8,6 @@ import (
 	"os/signal"
 
 	"github.com/3-brain-cells/sah-backend/db"
-	"github.com/3-brain-cells/sah-backend/env"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -21,19 +20,8 @@ var (
 // Constraints (make function similar to):
 func ExampleRunFunction(ctx context.Context, dbProvider db.Provider) error { return nil }
 
-func RunBot(dbProvider db.Provider) {
-	var s *discordgo.Session
-
-	token, err := env.GetEnv("token", "BOT_TOKEN")
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	s, err = discordgo.New("Bot " + token)
-	if err != nil {
-		log.Fatalf("Invalid bot parameters: %v", err)
-	}
-	// log.Println("Exiting init")
+func RunBot(dbProvider db.Provider, discordSession *discordgo.Session) {
+	// var s *discordgo.Session
 
 	commands := []*discordgo.ApplicationCommand{
 		{
@@ -52,8 +40,9 @@ func RunBot(dbProvider db.Provider) {
 
 			userID := i.Interaction.Member.User.ID
 			guildID := i.Interaction.GuildID
+			channelID := i.Interaction.ChannelID
 
-			content := create_event(userID, guildID, dbProvider)
+			content := create_event(userID, guildID, channelID, dbProvider)
 
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
@@ -64,16 +53,16 @@ func RunBot(dbProvider db.Provider) {
 		},
 	}
 
-	s.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
+	discordSession.AddHandler(func(s *discordgo.Session, i *discordgo.InteractionCreate) {
 		if h, ok := commandHandlers[i.ApplicationCommandData().Name]; ok {
 			h(s, i)
 		}
 	})
-	s.AddHandler(func(s *discordgo.Session, r *discordgo.Ready) {
-		log.Printf("Logged in as: %v#%v", s.State.User.Username, s.State.User.Discriminator)
+	discordSession.AddHandler(func(discordSession *discordgo.Session, r *discordgo.Ready) {
+		log.Printf("Logged in as: %v#%v", discordSession.State.User.Username, discordSession.State.User.Discriminator)
 	})
 
-	err = s.Open()
+	err := discordSession.Open()
 	if err != nil {
 		log.Fatalf("Cannot open the session: %v", err)
 	}
@@ -81,14 +70,14 @@ func RunBot(dbProvider db.Provider) {
 	log.Println("Adding commands...")
 	registeredCommands := make([]*discordgo.ApplicationCommand, len(commands))
 	for i, v := range commands {
-		cmd, err := s.ApplicationCommandCreate(s.State.User.ID, *GuildID, v)
+		cmd, err := discordSession.ApplicationCommandCreate(discordSession.State.User.ID, *GuildID, v)
 		if err != nil {
 			log.Panicf("Cannot create '%v' command: %v", v.Name, err)
 		}
 		registeredCommands[i] = cmd
 	}
 
-	defer s.Close()
+	defer discordSession.Close()
 
 	stop := make(chan os.Signal, 1)
 	signal.Notify(stop, os.Interrupt)
@@ -107,7 +96,7 @@ func RunBot(dbProvider db.Provider) {
 		// }
 
 		for _, v := range registeredCommands {
-			err := s.ApplicationCommandDelete(s.State.User.ID, *GuildID, v.ID)
+			err := discordSession.ApplicationCommandDelete(discordSession.State.User.ID, *GuildID, v.ID)
 			if err != nil {
 				log.Panicf("Cannot delete '%v' command: %v", v.Name, err)
 			}
@@ -115,4 +104,11 @@ func RunBot(dbProvider db.Provider) {
 	}
 
 	log.Println("Gracefully shutdowning")
+}
+
+func SchedulingMessage(discordSession *discordgo.Session, message string, channelID string) {
+	_, err := discordSession.ChannelMessageSend(channelID, message)
+	if err != nil {
+		log.Printf("Cannot send message: %v", err)
+	}
 }
