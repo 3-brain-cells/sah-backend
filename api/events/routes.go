@@ -320,7 +320,7 @@ func FindAvailability(event types.Event) []types.DayAvailability {
 	// 24 * 4 buckets = 96 buckets * numDays
 	duration := event.LatestDate.Sub(event.EarliestDate)
 	var numDays float64 = duration.Hours() / 24
-	var buckets [96 * numDays]int
+	var buckets = make([]int, int(96*numDays))
 	max := 0
 
 	// populate the buckets

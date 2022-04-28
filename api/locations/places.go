@@ -22,7 +22,7 @@ func GetNearby(coordinates types.Coordinates) {
 		log.Fatal(err)
 	}
 
-	url := fmt.Sprintf("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%v,%v&radius=1500&type=restaurant&keyword=cruise&key=%v", coordinates.Latitude, coordinates.Longitude, api_key)
+	url := fmt.Sprintf("https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=%v,%v&radius=1500&type=restaurant&key=%v", coordinates.Latitude, coordinates.Longitude, api_key)
 	method := "GET"
 
 	client := &http.Client{}
