@@ -25,7 +25,8 @@ type Event struct {
 
 	Populated        bool               `json:"populated" bson:"populated"`                 // field is set once creator goes on web and populates
 	VoteOptions      VoteOption         `json:"vote_options" bson:"vote_options"`           // ^ not done until this is done
-	UserAvailability []UserAvailability `json:"user_availability" bson:"user_availability"` // ^ not done until this is done
+	// Maps Discord User ID => availability
+	UserAvailability map[string]UserAvailability `json:"user_availability" bson:"user_availability"` // ^ not done until this is done
 	UserVotes        []UserVotes        `json:"user_votes" bson:"user_votes"`               // ^ not done until this is done
 }
 
@@ -51,7 +52,6 @@ type UserVotes struct {
 }
 
 type UserAvailability struct {
-	UserID          string            `json:"user_id" bson:"user_id"`
 	DayAvailability []DayAvailability `json:"day_availability" bson:"day_availability"`
 }
 

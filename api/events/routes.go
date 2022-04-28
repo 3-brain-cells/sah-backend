@@ -28,7 +28,7 @@ func Routes(database db.Provider, discordSession *discordgo.Session) *chi.Mux {
 	router.Put("/{id}", PopulateEvent(database, discordSession))
 	router.Get("/{id}/vote_options", GetVoteOptions(database))
 	router.Post("/{id}/votes", PostVotes(database))
-	router.Get("/{id}/availability/info", GetAvailabilityInfo(database))
+	router.Get("/{id}/availability/{user_id}", GetAvailability(database))
 	router.Put("/{id}/availability/{user_id}", PutAvailability(database))
 
 	return router
@@ -218,25 +218,34 @@ func PostVotes(eventProvider db.EventProvider) http.HandlerFunc {
 	}
 }
 
-type getAvailabilityInfoResponseBody struct {
+type getAvailabilityResponseBody struct {
 	EarliestDate    time.Time `json:"earliest_date"` // ISO 8601 string
 	LatestDate      time.Time `json:"latest_date"`   // ISO 8601 string
 	StartTimeHour   int       `json:"start_time_hour"`
 	StartTimeMinute int       `json:"start_time_minute"`
 	EndTimeHour     int       `json:"end_time_hour"`
 	EndTimeMinute   int       `json:"end_time_minute"`
+	// If null, then availability has not been submitted yet
+	Days []types.DayAvailability `json:"days"`
 }
 
-func GetAvailabilityInfo(eventProvider db.EventProvider) http.HandlerFunc {
+func GetAvailability(eventProvider db.EventProvider) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		id := chi.URLParam(r, "id")
 		if id == "" {
-			util.ErrorWithCode(r, w, errors.New("the URL parameter is empty"),
+			util.ErrorWithCode(r, w, errors.New("the event ID URL parameter is empty"),
 				http.StatusBadRequest)
 			return
 		}
 
-		log.Printf("GetAvailabilityInfo event_id=%s", id)
+		userID := chi.URLParam(r, "user_id")
+		if userID == "" {
+			util.ErrorWithCode(r, w, errors.New("the user ID URL parameter is empty"),
+				http.StatusBadRequest)
+			return
+		}
+
+		log.Printf("GetAvailability event_id=%s", id)
 		event, err := eventProvider.GetSingle(r.Context(), id)
 		if err != nil {
 			util.Error(r, w, err)
@@ -247,14 +256,21 @@ func GetAvailabilityInfo(eventProvider db.EventProvider) http.HandlerFunc {
 				http.StatusNotFound)
 			return
 		}
+		var myAvailabilityDays []types.DayAvailability = nil
+		if days, ok := events.UserAvailability[userID]; ok {
+			if len(days) > 0 {
+				myAvailabilityDays = days
+			}
+		}
 
-		responseBody := getAvailabilityInfoResponseBody{
+		responseBody := getAvailabilityResponseBody{
 			EarliestDate:    event.EarliestDate,
 			LatestDate:      event.LatestDate,
 			StartTimeHour:   event.StartTimeHour,
 			StartTimeMinute: event.StartTimeMinute,
 			EndTimeHour:     event.EndTimeHour,
 			EndTimeMinute:   event.EndTimeMinute,
+			Days: myAvailabilityDays,
 		}
 
 		// Return the single announcement as the top-level JSON
