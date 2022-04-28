@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"math"
 	"net/http"
 	"time"
 
@@ -310,6 +311,94 @@ func PutAvailability(eventProvider db.EventProvider) http.HandlerFunc {
 	}
 }
 
-func FindAvailability(userAvailability types.UserAvailability) {
+func FindAvailability(event types.Event) []types.DayAvailability {
+	// 1. divide time slots into buckets of 15 min in the day
+	// 2. look for the longest time slots available / most popular
+	// 3. first we need to create the buckets and then fill it in
+	//    with number of users available
 
+	// 24 * 4 buckets = 96 buckets * numDays
+	duration := event.LatestDate.Sub(event.EarliestDate)
+	var numDays float64 = duration.Hours() / 24
+	var buckets [96 * numDays]int
+	max := 0
+
+	// populate the buckets
+	for _, userAvailability := range event.UserAvailability {
+		for _, dayAvailability := range userAvailability.DayAvailability {
+			// bucket indexing [(dayNum * 96) + (hour * 4)]
+			offset := dayAvailability.Date.Sub(event.EarliestDate).Hours() * 4
+			for _, block := range dayAvailability.AvailableBlocks {
+				startBucket := (block.StartMinute % 15) + block.StartHour + int(offset)
+				endBucket := int(math.Ceil(float64(block.EndMinute)/15)) + block.EndHour + int(offset)
+				for i := startBucket; i <= endBucket; i++ {
+					buckets[i] += 1
+					if buckets[i] > max {
+						max = buckets[i]
+					}
+				}
+			}
+		}
+	}
+
+	startBucket := -1
+	var endBucket int
+	var ret []types.DayAvailability
+	// check which bucket ranges are most popular --> should be == max
+	for j := 0; j < int(numDays); j++ {
+		var dayBlock []types.AvailabilityBlock
+		for i := 0; i < 96; i++ {
+			if startBucket == -1 && buckets[i] == max {
+				startBucket = i
+			} else if buckets[i] < max || i-startBucket == 8 {
+				endBucket = i
+				var d types.AvailabilityBlock
+				d.StartHour = startBucket / 4
+				d.EndHour = endBucket / 4
+				d.StartMinute = 15 * (startBucket % 4)
+				d.EndMinute = 15 * (endBucket % 4)
+				dayBlock = append(dayBlock, d)
+				startBucket = -1
+			}
+		}
+		var day types.DayAvailability
+		day.Date = event.EarliestDate.Add(time.Hour * time.Duration(24*j))
+		// check if the dayBlock is empty
+		if len(dayBlock) > 0 {
+			day.AvailableBlocks = dayBlock
+			ret = append(ret, day)
+		}
+	}
+
+	// check if we have at least three options, if not
+	// repeat with max - 1
+	if len(ret) < 3 {
+		ret := []types.DayAvailability{}
+		max -= 1
+		for j := 0; j < int(numDays); j++ {
+			var dayBlock []types.AvailabilityBlock
+			for i := 0; i < 96; i++ {
+				if startBucket == -1 && buckets[i] == max {
+					startBucket = i
+				} else if buckets[i] < max || i-startBucket == 8 {
+					endBucket = i
+					var d types.AvailabilityBlock
+					d.StartHour = startBucket / 4
+					d.EndHour = endBucket / 4
+					d.StartMinute = 15 * (startBucket % 4)
+					d.EndMinute = 15 * (endBucket % 4)
+					dayBlock = append(dayBlock, d)
+					startBucket = -1
+				}
+			}
+			var day types.DayAvailability
+			day.Date = event.EarliestDate.Add(time.Hour * time.Duration(24*j))
+			// check if the dayBlock is empty
+			if len(dayBlock) > 0 {
+				day.AvailableBlocks = dayBlock
+				ret = append(ret, day)
+			}
+		}
+	}
+	return ret
 }
