@@ -26,6 +26,7 @@ type EventProvider interface {
 	// ignore the following fields:
 	// - creatorID
 	// - guildID
+	// - channelID
 	// - populated
 	// - voteOptions
 	// - userVotes
@@ -37,6 +38,9 @@ type EventProvider interface {
 
 	// PutAvailability updates the user availability
 	PutAvailability(ctx context.Context, availability types.UserAvailability, eventID string) error
+
+	// GetAllEvents returns all events in the database
+	GetAllEvents(ctx context.Context) ([]*types.Event, error)
 
 	// Delete deletes an existing event
 	// Delete(ctx context.Context, eventID int) error

@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -11,6 +12,8 @@ import (
 	"github.com/3-brain-cells/sah-backend/api/oauth"
 	"github.com/3-brain-cells/sah-backend/db"
 	"github.com/3-brain-cells/sah-backend/db/mongo"
+	"github.com/3-brain-cells/sah-backend/env"
+	"github.com/bwmarrin/discordgo"
 	"github.com/go-chi/chi"
 	"github.com/go-chi/chi/middleware"
 	"github.com/go-chi/cors"
@@ -24,8 +27,9 @@ import (
 // resources used at runtime that each have
 // a lifecycle of initialization, connection, and disconnection
 type APIServer struct {
-	dbProvider db.Provider
-	logger     zerolog.Logger
+	dbProvider     db.Provider
+	logger         zerolog.Logger
+	discordSession *discordgo.Session
 }
 
 // NewAPIServer initializes the struct and all constituent components
@@ -37,9 +41,20 @@ func NewAPIServer(logger zerolog.Logger) (*APIServer, error) {
 		return nil, errors.Wrap(err, "could not initialize MongoDB handler")
 	}
 
+	token, err := env.GetEnv("token", "BOT_TOKEN")
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	s, err := discordgo.New("Bot " + token)
+	if err != nil {
+		log.Fatalf("Invalid bot parameters: %v", err)
+	}
+
 	return &APIServer{
-		dbProvider: dbProvider,
-		logger:     logger,
+		dbProvider:     dbProvider,
+		logger:         logger,
+		discordSession: s,
 	}, nil
 }
 
@@ -135,7 +150,7 @@ func (a *APIServer) routes() *chi.Mux {
 			w.WriteHeader(204)
 		})
 
-		r.Mount("/events", events.Routes(a.dbProvider))
+		r.Mount("/events", events.Routes(a.dbProvider, a.discordSession))
 	})
 	router.Mount("/", oauth.Routes(a.dbProvider))
 

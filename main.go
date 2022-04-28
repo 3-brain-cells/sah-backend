@@ -75,5 +75,5 @@ func main() {
 	go api.Serve(ctx, 5000)
 	logger.Info().Str("provider", fmt.Sprintf("%#+v", api.dbProvider)).Msg("Forked thread to serve")
 	// Set up the bot
-	bot.RunBot(api.dbProvider)
+	bot.RunBot(api.dbProvider, api.discordSession)
 }

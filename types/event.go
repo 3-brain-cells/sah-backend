@@ -10,6 +10,7 @@ type Event struct {
 	CreatorID string `json:"creator_id" bson:"creator_id"`
 	GuildID   string `json:"guild_id" bson:"guild_id"`
 	EventID   string `json:"id" bson:"id"`
+	ChannelID string `json:"channel_id" bson:"channel_id"`
 
 	Title              string           `json:"title" bson:"title"`
 	Description        string           `json:"description" bson:"description"`
