@@ -257,9 +257,9 @@ func GetAvailability(eventProvider db.EventProvider) http.HandlerFunc {
 			return
 		}
 		var myAvailabilityDays []types.DayAvailability = nil
-		if days, ok := events.UserAvailability[userID]; ok {
-			if len(days) > 0 {
-				myAvailabilityDays = days
+		if userAvailability, ok := event.UserAvailability[userID]; ok {
+			if len(userAvailability.DayAvailability) > 0 {
+				myAvailabilityDays = userAvailability.DayAvailability
 			}
 		}
 
@@ -314,8 +314,7 @@ func PutAvailability(eventProvider db.EventProvider) http.HandlerFunc {
 		}
 
 		log.Printf("PutAvailability event_id=%s user_id=%s", id, userID)
-		err = eventProvider.PutAvailability(r.Context(), types.UserAvailability{
-			UserID:          userID,
+		err = eventProvider.PutAvailability(r.Context(), userID, types.UserAvailability{
 			DayAvailability: body.Days,
 		}, id)
 		if err != nil {
