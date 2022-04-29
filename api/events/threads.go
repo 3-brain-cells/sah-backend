@@ -29,7 +29,10 @@ func ManageEvent(eventProvider db.EventProvider, discordSession *discordgo.Sessi
 		time.Sleep(event.SwitchToVotingTime.Sub(currentTime))
 	}
 	if currentTime.Before(event.EarliestDate) {
-		// TODO: call Varnika's function to calculate best options
+		// TOOD: calculate best time and location options and update the database
+		// availTimes := FindAvailability(*event)
+		// availLocations := FindLocations(*event)
+
 		// TODO: print out message to tell users to vote
 		str := fmt.Sprintf("Event %s is now in voting phase. Please vote at the following link https://INSERTLINK.com/%s", event.Title, event.EventID)
 		bot.SchedulingMessage(discordSession, str, event.ChannelID)

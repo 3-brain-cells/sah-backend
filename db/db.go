@@ -39,6 +39,9 @@ type EventProvider interface {
 	// PutAvailability updates the user availability
 	PutAvailability(ctx context.Context, userID string, availability types.UserAvailability, eventID string) error
 
+	// PutAvailability updates the user address
+	PutLocation(ctx context.Context, userID string, location types.UserLocation, eventID string) error
+
 	// GetAllEvents returns all events in the database
 	GetAllEvents(ctx context.Context) ([]*types.Event, error)
 

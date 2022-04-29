@@ -24,7 +24,6 @@ func TestAvailability(t *testing.T) {
 	mar2, _ := time.Parse(shortform, "2022-Mar-02")
 	mar3, _ := time.Parse(shortform, "2022-Mar-03")
 
-
 	userAvailabilities := make(map[string]types.UserAvailability)
 	var userAvailability types.UserAvailability
 	// USER 1

@@ -317,6 +317,43 @@ func (p *Provider) PutAvailability(ctx context.Context, userID string, availabil
 	return nil
 }
 
+func (p *Provider) PutLocation(ctx context.Context, userID string, location types.UserLocation, eventID string) error {
+	collection := p.events()
+
+	mmap := make(map[string]interface{})
+	mmap[userID] = location.LocationID
+
+	// create userID -> availability
+	locationJSON, err := json.Marshal(mmap)
+	if err != nil {
+		return err
+	}
+	// deserialize that string into a map[string]interface{}
+	mmap = make(map[string]interface{})
+	err = json.Unmarshal(locationJSON, &mmap)
+	if err != nil {
+		return err
+	}
+
+	updateDocument := bson.D{}
+	for k, v := range mmap {
+		updateDocument = append(updateDocument, bson.E{Key: k, Value: v})
+	}
+
+	filter := bson.D{{Key: "id", Value: eventID}}
+	updateQuery := bson.D{{Key: "$set", Value: updateDocument}}
+
+	_, err = collection.UpdateOne(ctx, filter, updateQuery)
+
+	if err != nil {
+		if writeException, ok := err.(mongo.WriteException); ok && isDuplicate(writeException) {
+			return db.NewDuplicateIDError(eventID)
+		}
+		return err
+	}
+	return nil
+}
+
 func (p *Provider) GetAllEvents(ctx context.Context) ([]*types.Event, error) {
 	collection := p.events()
 	cursor, err := collection.Find(ctx, bson.D{{}})

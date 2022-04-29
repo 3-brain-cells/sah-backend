@@ -23,11 +23,16 @@ type Event struct {
 	LocationCategory   LocationCategory `json:"location_category" bson:"location_category"`
 	SwitchToVotingTime time.Time        `json:"switch_to_voting" bson:"switch_to_voting"` // ISO 8601 string, TODO
 
-	Populated        bool               `json:"populated" bson:"populated"`                 // field is set once creator goes on web and populates
-	VoteOptions      VoteOption         `json:"vote_options" bson:"vote_options"`           // ^ not done until this is done
+	Populated   bool       `json:"populated" bson:"populated"`       // field is set once creator goes on web and populates
+	VoteOptions VoteOption `json:"vote_options" bson:"vote_options"` // ^ not done until this is done
 	// Maps Discord User ID => availability
 	UserAvailability map[string]UserAvailability `json:"user_availability" bson:"user_availability"` // ^ not done until this is done
-	UserVotes        []UserVotes        `json:"user_votes" bson:"user_votes"`               // ^ not done until this is done
+	UserLocations    map[string]UserLocation     `json:"user_locations" bson:"user_locations"`       // userID:userLocation
+	UserVotes        []UserVotes                 `json:"user_votes" bson:"user_votes"`               // ^ not done until this is done
+}
+
+type UserLocation struct {
+	LocationID string `json:"location_id" bson:"location_id"`
 }
 
 type VoteOption struct {
@@ -38,6 +43,8 @@ type VoteOption struct {
 type Location struct {
 	Name    string `json:"name" bson:"name"`
 	Address string `json:"address" bson:"address"`
+	Rating  int    `json:"rating" bson:"rating"`
+	Image   string `json:"image" bson:"image"`
 }
 
 type TimePair struct {

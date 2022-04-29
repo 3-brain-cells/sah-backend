@@ -30,6 +30,7 @@ func Routes(database db.Provider, discordSession *discordgo.Session) *chi.Mux {
 	router.Post("/{id}/votes", PostVotes(database))
 	router.Get("/{id}/availability/{user_id}", GetAvailability(database))
 	router.Put("/{id}/availability/{user_id}", PutAvailability(database))
+	router.Put("/{id}/location/{user_id}", PutLocation(database))
 
 	return router
 }
@@ -270,7 +271,7 @@ func GetAvailability(eventProvider db.EventProvider) http.HandlerFunc {
 			StartTimeMinute: event.StartTimeMinute,
 			EndTimeHour:     event.EndTimeHour,
 			EndTimeMinute:   event.EndTimeMinute,
-			Days: myAvailabilityDays,
+			Days:            myAvailabilityDays,
 		}
 
 		// Return the single announcement as the top-level JSON
@@ -283,6 +284,46 @@ func GetAvailability(eventProvider db.EventProvider) http.HandlerFunc {
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		w.Write(jsonResponse)
+	}
+}
+
+type putLocationRequestBody struct {
+	Address string `json:"address"`
+}
+
+func PutLocation(eventProvider db.EventProvider) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		id := chi.URLParam(r, "id")
+		if id == "" {
+			util.ErrorWithCode(r, w, errors.New("the event ID URL parameter is empty"),
+				http.StatusBadRequest)
+			return
+		}
+
+		userID := chi.URLParam(r, "user_id")
+		if userID == "" {
+			util.ErrorWithCode(r, w, errors.New("the user ID URL parameter is empty"),
+				http.StatusBadRequest)
+			return
+		}
+
+		var body putLocationRequestBody
+		err := json.NewDecoder(r.Body).Decode(&body)
+		if err != nil {
+			util.ErrorWithCode(r, w, err, http.StatusBadRequest)
+			return
+		}
+
+		log.Printf("PutAvailability event_id=%s user_id=%s", id, userID)
+		err = eventProvider.PutLocation(r.Context(), userID, types.UserLocation{
+			LocationID: body.Address,
+		}, id)
+		if err != nil {
+			util.Error(r, w, err)
+			return
+		}
+
+		w.WriteHeader(http.StatusCreated)
 	}
 }
 
@@ -337,7 +378,7 @@ func FindAvailability(event types.Event) []types.DayAvailability {
 	tempLatest := time.Date(event.EarliestDate.Year(), event.LatestDate.Month(), event.LatestDate.Day(), 0, 0, 0, 0, event.LatestDate.Location())
 	duration := tempLatest.Sub(tempEarliest)
 	var numDays float64 = 1 + duration.Hours()/24
-	var buckets = make([]int, int(96*numDays) + 1)
+	var buckets = make([]int, int(96*numDays)+1)
 	max := 0
 
 	// populate the buckets
