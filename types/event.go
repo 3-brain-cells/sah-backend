@@ -20,7 +20,6 @@ type Event struct {
 	StartTimeMinute    int              `json:"start_time_minute" bson:"start_time_minute"`
 	EndTimeHour        int              `json:"end_time_hour" bson:"end_time_hour"`
 	EndTimeMinute      int              `json:"end_time_minute" bson:"end_time_minute"`
-	LocationCategory   LocationCategory `json:"location_category" bson:"location_category"`
 	SwitchToVotingTime time.Time        `json:"switch_to_voting" bson:"switch_to_voting"` // ISO 8601 string
 
 	Populated   bool       `json:"populated" bson:"populated"`       // field is set once creator goes on web and populates
@@ -75,9 +74,3 @@ type AvailabilityBlock struct {
 	EndHour     int `json:"end_hour" bson:"end_hour"`
 	EndMinute   int `json:"end_minute" bson:"end_minute"`
 }
-
-type LocationCategory string
-
-var (
-	LocationCategoryGeneral LocationCategory = "general"
-)
