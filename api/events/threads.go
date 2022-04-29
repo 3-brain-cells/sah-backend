@@ -50,9 +50,47 @@ func ManageEvent(eventProvider db.EventProvider, discordSession *discordgo.Sessi
 		bot.SchedulingMessage(discordSession, str, event.ChannelID)
 		time.Sleep(event.EarliestDate.Sub(currentTime))
 	}
-	// TODO: print final message with hangout time and location
-	// ^^ calls Varnika's function to get the final
-	str := "TODO"
+	// iterate through all event.uservotes
+	// get the location with most votes
+	// get the time with most votes
+
+	// make a new uservotes
+	finalTimes := make([]int, len(event.UserVotes[0].TimeVotes))
+	finalLocations := make([]int, len(event.UserVotes[0].LocationVotes))
+	for _, userVote := range event.UserVotes {
+		// get the location with most votes
+		// get the time with most votes
+		for i, timeVote := range userVote.TimeVotes {
+			finalTimes[i] += timeVote
+		}
+		for i, locationVote := range userVote.LocationVotes {
+			finalLocations[i] += locationVote
+		}
+	}
+	// get the location with most votes
+	max := 0
+	locationIndex := 0
+	for i, locationVote := range finalLocations {
+		if locationVote > max {
+			max = locationVote
+			locationIndex = i
+		}
+	}
+
+	max = 0
+	timeIndex := 0
+	for i, timeVote := range finalTimes {
+		if timeVote > max {
+			max = timeVote
+			timeIndex = i
+		}
+	}
+
+	// get the actual location and time and create string
+	locationFinal := event.VoteOptions.Location[locationIndex]
+	startEndFinal := event.VoteOptions.StartEndPairs[timeIndex]
+
+	str := fmt.Sprintf("Event %v is now over. The event will take place at %v (%v) from %v till %v", event.Title, locationFinal.Name, locationFinal.Address, startEndFinal.Start, startEndFinal.End)
 	bot.SchedulingMessage(discordSession, str, event.ChannelID)
 
 }

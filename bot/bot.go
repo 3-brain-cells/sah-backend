@@ -31,13 +31,6 @@ func RunBot(dbProvider db.Provider, discordSession *discordgo.Session) {
 	}
 	commandHandlers := map[string]func(s *discordgo.Session, i *discordgo.InteractionCreate){
 		"create-event": func(s *discordgo.Session, i *discordgo.InteractionCreate) {
-			/* TODO
-			call create_event function
-				- should read the user (i.Interaction.User.Username) that calls the function
-				- should return the event link
-				- update the GuildID:UserID:Link to database
-			*/
-
 			userID := i.Interaction.Member.User.ID
 			guildID := i.Interaction.GuildID
 			channelID := i.Interaction.ChannelID

@@ -165,8 +165,6 @@ func (p *Provider) CreatePartial(ctx context.Context, event types.Event) error {
 func (p *Provider) PopulateEvent(ctx context.Context, event types.Event, userID string) error {
 	collection := p.events()
 
-	// TODO check userID is the creator of the event
-
 	// serialize to a string JSON
 	eventJSON, err := json.Marshal(event)
 	if err != nil {
@@ -207,8 +205,7 @@ func (p *Provider) PopulateEvent(ctx context.Context, event types.Event, userID 
 	return nil
 }
 
-// // Update updates an existing event
-// TODO: this needs to be fixed
+// Update updates an existing event
 func (p *Provider) PostVotes(ctx context.Context, votes types.UserVotes, eventID string) error {
 
 	collection := p.events()

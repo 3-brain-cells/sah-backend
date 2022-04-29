@@ -111,5 +111,4 @@ func GetNearby(event types.Event) ([]types.Location, error) {
 		locations[i].Rating = result["rating"].(int)
 	}
 	return locations, nil
-	// TODO: format the return
 }

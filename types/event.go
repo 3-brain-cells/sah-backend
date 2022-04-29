@@ -21,7 +21,7 @@ type Event struct {
 	EndTimeHour        int              `json:"end_time_hour" bson:"end_time_hour"`
 	EndTimeMinute      int              `json:"end_time_minute" bson:"end_time_minute"`
 	LocationCategory   LocationCategory `json:"location_category" bson:"location_category"`
-	SwitchToVotingTime time.Time        `json:"switch_to_voting" bson:"switch_to_voting"` // ISO 8601 string, TODO
+	SwitchToVotingTime time.Time        `json:"switch_to_voting" bson:"switch_to_voting"` // ISO 8601 string
 
 	Populated   bool       `json:"populated" bson:"populated"`       // field is set once creator goes on web and populates
 	VoteOptions VoteOption `json:"vote_options" bson:"vote_options"` // ^ not done until this is done
