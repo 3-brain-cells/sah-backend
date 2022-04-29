@@ -251,7 +251,7 @@ func isDuplicate(writeException mongo.WriteException) bool {
 	return false
 }
 
-func (p *Provider) PutAvailability(ctx context.Context, userID string, availability types.UserAvailability, eventID string) error {
+func (p *Provider) PutUserAvailabilityAndLocation(ctx context.Context, userID string, availability types.UserAvailability, location types.UserLocation, eventID string) error {
 	// TODO implement :)
 	// Note: we probably want to change both availability and votes
 	// to use map[string][...] where the key is the user ID
@@ -298,7 +298,7 @@ func (p *Provider) PutLocation(ctx context.Context, userID string, location type
 	collection := p.events()
 
 	mmap := make(map[string]interface{})
-	mmap[userID] = location.LocationID
+	mmap[userID] = location
 
 	// create userID -> availability
 	locationJSON, err := json.Marshal(mmap)

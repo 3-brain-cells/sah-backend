@@ -30,7 +30,7 @@ func Routes(database db.Provider, discordSession *discordgo.Session) *chi.Mux {
 	router.Post("/{id}/votes", PostVotes(database))
 	router.Get("/{id}/availability/{user_id}", GetAvailability(database))
 	router.Put("/{id}/availability/{user_id}", PutAvailability(database))
-	router.Put("/{id}/location/{user_id}", PutLocation(database))
+	// router.Put("/{id}/location/{user_id}", PutLocation(database))
 
 	return router
 }
@@ -291,44 +291,45 @@ type putLocationRequestBody struct {
 	Address string `json:"address"`
 }
 
-func PutLocation(eventProvider db.EventProvider) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		id := chi.URLParam(r, "id")
-		if id == "" {
-			util.ErrorWithCode(r, w, errors.New("the event ID URL parameter is empty"),
-				http.StatusBadRequest)
-			return
-		}
+// func PutLocation(eventProvider db.EventProvider) http.HandlerFunc {
+// 	return func(w http.ResponseWriter, r *http.Request) {
+// 		id := chi.URLParam(r, "id")
+// 		if id == "" {
+// 			util.ErrorWithCode(r, w, errors.New("the event ID URL parameter is empty"),
+// 				http.StatusBadRequest)
+// 			return
+// 		}
 
-		userID := chi.URLParam(r, "user_id")
-		if userID == "" {
-			util.ErrorWithCode(r, w, errors.New("the user ID URL parameter is empty"),
-				http.StatusBadRequest)
-			return
-		}
+// 		userID := chi.URLParam(r, "user_id")
+// 		if userID == "" {
+// 			util.ErrorWithCode(r, w, errors.New("the user ID URL parameter is empty"),
+// 				http.StatusBadRequest)
+// 			return
+// 		}
 
-		var body putLocationRequestBody
-		err := json.NewDecoder(r.Body).Decode(&body)
-		if err != nil {
-			util.ErrorWithCode(r, w, err, http.StatusBadRequest)
-			return
-		}
+// 		var body putLocationRequestBody
+// 		err := json.NewDecoder(r.Body).Decode(&body)
+// 		if err != nil {
+// 			util.ErrorWithCode(r, w, err, http.StatusBadRequest)
+// 			return
+// 		}
 
-		log.Printf("PutAvailability event_id=%s user_id=%s", id, userID)
-		err = eventProvider.PutLocation(r.Context(), userID, types.UserLocation{
-			LocationID: body.Address,
-		}, id)
-		if err != nil {
-			util.Error(r, w, err)
-			return
-		}
+// 		log.Printf("PutAvailability event_id=%s user_id=%s", id, userID)
+// 		err = eventProvider.PutLocation(r.Context(), userID, types.UserLocation{
+// 			LocationID: body.Address,
+// 		}, id)
+// 		if err != nil {
+// 			util.Error(r, w, err)
+// 			return
+// 		}
 
-		w.WriteHeader(http.StatusCreated)
-	}
-}
+// 		w.WriteHeader(http.StatusCreated)
+// 	}
+// }
 
 type putAvailabilityRequestBody struct {
 	Days []types.DayAvailability `json:"days"`
+	Location types.UserLocation `json:"location"`
 }
 
 func PutAvailability(eventProvider db.EventProvider) http.HandlerFunc {
@@ -355,9 +356,9 @@ func PutAvailability(eventProvider db.EventProvider) http.HandlerFunc {
 		}
 
 		log.Printf("PutAvailability event_id=%s user_id=%s", id, userID)
-		err = eventProvider.PutAvailability(r.Context(), userID, types.UserAvailability{
+		err = eventProvider.PutUserAvailabilityAndLocation(r.Context(), userID, types.UserAvailability{
 			DayAvailability: body.Days,
-		}, id)
+		}, body.Location, id)
 		if err != nil {
 			util.Error(r, w, err)
 			return

@@ -27,12 +27,9 @@ type Event struct {
 	VoteOptions VoteOption `json:"vote_options" bson:"vote_options"` // ^ not done until this is done
 	// Maps Discord User ID => availability
 	UserAvailability map[string]UserAvailability `json:"user_availability" bson:"user_availability"` // ^ not done until this is done
+	// Maps Discord User ID => location
 	UserLocations    map[string]UserLocation     `json:"user_locations" bson:"user_locations"`       // userID:userLocation
 	UserVotes        []UserVotes                 `json:"user_votes" bson:"user_votes"`               // ^ not done until this is done
-}
-
-type UserLocation struct {
-	LocationID string `json:"location_id" bson:"location_id"`
 }
 
 type VoteOption struct {
@@ -45,6 +42,11 @@ type Location struct {
 	Address string `json:"address" bson:"address"`
 	Rating  int    `json:"rating" bson:"rating"`
 	Image   string `json:"image" bson:"image"`
+}
+
+type UserLocation struct {
+	Latitude float64 `json:"latitude" bson:"latitude"`
+	Longitude float64 `json:"longitude" bson:"longitude"`
 }
 
 type TimePair struct {

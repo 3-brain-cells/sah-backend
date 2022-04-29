@@ -36,8 +36,8 @@ type EventProvider interface {
 	// Update updates an existing event
 	PostVotes(ctx context.Context, votes types.UserVotes, eventID string) error
 
-	// PutAvailability updates the user availability
-	PutAvailability(ctx context.Context, userID string, availability types.UserAvailability, eventID string) error
+	// PutUserAvailabilityAndLocation updates the user availability and location
+	PutUserAvailabilityAndLocation(ctx context.Context, userID string, availability types.UserAvailability, location types.UserLocation, eventID string) error
 
 	// PutAvailability updates the user address
 	PutLocation(ctx context.Context, userID string, location types.UserLocation, eventID string) error
