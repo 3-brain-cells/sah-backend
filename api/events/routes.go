@@ -368,29 +368,29 @@ func PutAvailability(eventProvider db.EventProvider) http.HandlerFunc {
 }
 
 func FindAvailability(event types.Event) []types.TimePair {
-	// 1. divide time slots into buckets of 15 min in the day
+	// 1. divide time slots into buckets of 30 min in the day
 	// 2. look for the longest time slots available / most popular
 	// 3. first we need to create the buckets and then fill it in
 	//    with number of users available
 
-	// 24 * 4 buckets = 96 buckets * numDays
+	// 24 * 2 buckets = 48 buckets * numDays
 	tempEarliest := time.Date(event.EarliestDate.Year(), event.EarliestDate.Month(), event.EarliestDate.Day(), 0, 0, 0, 0, event.EarliestDate.Location())
 	tempLatest := time.Date(event.EarliestDate.Year(), event.LatestDate.Month(), event.LatestDate.Day(), 0, 0, 0, 0, event.LatestDate.Location())
 	duration := tempLatest.Sub(tempEarliest)
 	var numDays float64 = 1 + duration.Hours()/24
-	var buckets = make([]int, int(96*numDays)+1)
+	var buckets = make([]int, int(48*numDays)+1)
 	max := 0
 
 	// populate the buckets
 	for _, userAvailability := range event.UserAvailability {
 		for _, dayAvailability := range userAvailability.DayAvailability {
-			// bucket indexing [(dayNum * 96) + (hour * 4)]
+			// bucket indexing [(dayNum * 48) + (hour * 2)]
 			// make temp time, copies event.Earliest Date and makes hour = 0
-			offset := dayAvailability.Date.Sub(tempEarliest).Hours() * 4
+			offset := dayAvailability.Date.Sub(tempEarliest).Hours() * 2
 
 			for _, block := range dayAvailability.AvailableBlocks {
-				startBucket := (block.StartMinute % 15) + (block.StartHour * 4) + int(offset)
-				endBucket := int(math.Ceil(float64(block.EndMinute)/15)) + (block.EndHour * 4) + int(offset)
+				startBucket := (block.StartMinute % 30) + (block.StartHour * 2) + int(offset)
+				endBucket := int(math.Ceil(float64(block.EndMinute)/30)) + (block.EndHour * 2) + int(offset)
 				for i := startBucket; i <= endBucket; i++ {
 					buckets[i] += 1
 					if buckets[i] > max {
@@ -410,16 +410,20 @@ func FindAvailability(event types.Event) []types.TimePair {
 		for j := 0; j < int(numDays); j++ {
 			startBucket = -1
 			var dayBlock []types.AvailabilityBlock
-			for i := 0; i < 96; i++ {
-				if startBucket == -1 && buckets[j*96+i] >= max {
+			for i := 0; i < 48; i++ {
+				if startBucket == -1 && buckets[j*48+i] >= max {
 					startBucket = i
-				} else if startBucket != -1 && (buckets[j*96+i] < max || i-startBucket == 8) {
+				} else if startBucket != -1 && buckets[j*48+i] < max && i-startBucket < 2 {
+					// needs to be at least 1 hr long
+					continue;
+				} else if startBucket != -1 && (buckets[j*48+i] < max || i-startBucket == 12) {
+					// max of 3 hrs
 					endBucket = i
 					var d types.AvailabilityBlock
-					d.StartHour = int(startBucket / 4)
-					d.EndHour = int(endBucket / 4)
-					d.StartMinute = 15 * (startBucket % 4)
-					d.EndMinute = 15 * (endBucket % 4)
+					d.StartHour = int(startBucket / 2)
+					d.EndHour = int(endBucket / 2)
+					d.StartMinute = 30 * (startBucket % 2)
+					d.EndMinute = 30 * (endBucket % 2)
 					dayBlock = append(dayBlock, d)
 					startBucket = -1
 				}
