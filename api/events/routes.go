@@ -367,7 +367,7 @@ func PutAvailability(eventProvider db.EventProvider) http.HandlerFunc {
 	}
 }
 
-func FindAvailability(event types.Event) []types.DayAvailability {
+func FindAvailability(event types.Event) []types.TimePair {
 	// 1. divide time slots into buckets of 15 min in the day
 	// 2. look for the longest time slots available / most popular
 	// 3. first we need to create the buckets and then fill it in
@@ -435,5 +435,16 @@ func FindAvailability(event types.Event) []types.DayAvailability {
 		}
 		max = max - 1
 	}
-	return ret
+
+	// convert ret to list of time pairs
+	var ret2 []types.TimePair
+	for _, day := range ret {
+		for _, block := range day.AvailableBlocks {
+			var pair types.TimePair
+			pair.Start = time.Date(day.Date.Year(), day.Date.Month(), day.Date.Day(), block.StartHour, block.StartMinute, 0, 0, day.Date.Location())
+			pair.End = time.Date(day.Date.Year(), day.Date.Month(), day.Date.Day(), block.EndHour, block.EndMinute, 0, 0, day.Date.Location())
+			ret2 = append(ret2, pair)
+		}
+	}
+	return ret2
 }

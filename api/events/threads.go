@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/3-brain-cells/sah-backend/api/locations"
 	"github.com/3-brain-cells/sah-backend/bot"
 	"github.com/3-brain-cells/sah-backend/db"
 	"github.com/bwmarrin/discordgo"
@@ -23,17 +24,28 @@ func ManageEvent(eventProvider db.EventProvider, discordSession *discordgo.Sessi
 	}
 	if currentTime.Before(event.SwitchToVotingTime) {
 		// event is currently in scheduling phase
-		// TODO: print out message to tell users to input schedule
 		str := fmt.Sprintf("Event %s is now in scheduling phase. Please input your schedule to the following link https://INSERTLINK.com/%s", event.Title, event.EventID)
 		bot.SchedulingMessage(discordSession, str, event.ChannelID)
 		time.Sleep(event.SwitchToVotingTime.Sub(currentTime))
 	}
 	if currentTime.Before(event.EarliestDate) {
-		// TOOD: calculate best time and location options and update the database
-		// availTimes := FindAvailability(*event)
-		// availLocations := FindLocations(*event)
-
-		// TODO: print out message to tell users to vote
+		// calculate best time and location options and update the database
+		availTimes := FindAvailability(*event)
+		availLocations, err := locations.GetNearby(*event)
+		if err != nil {
+			fmt.Println("error getting locations: ", err)
+			return
+		}
+		// update these two to the database
+		event.VoteOptions.StartEndPairs = availTimes
+		event.VoteOptions.Location = availLocations
+		// update the database
+		ctx := context.Background()
+		err = eventProvider.UpdateVoteOptions(ctx, event.VoteOptions, event.EventID)
+		if err != nil {
+			fmt.Println("error updating event: ", err)
+			return
+		}
 		str := fmt.Sprintf("Event %s is now in voting phase. Please vote at the following link https://INSERTLINK.com/%s", event.Title, event.EventID)
 		bot.SchedulingMessage(discordSession, str, event.ChannelID)
 		time.Sleep(event.EarliestDate.Sub(currentTime))

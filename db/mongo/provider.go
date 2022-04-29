@@ -165,26 +165,6 @@ func (p *Provider) CreatePartial(ctx context.Context, event types.Event) error {
 func (p *Provider) PopulateEvent(ctx context.Context, event types.Event, userID string) error {
 	collection := p.events()
 
-	// new locations
-	locOne := types.Location{
-		Name:    "location one",
-		Address: "address one",
-	}
-	locTwo := types.Location{
-		Name:    "location two",
-		Address: "address two",
-	}
-	event.VoteOptions.Location = []types.Location{locOne, locTwo}
-
-	// new times: TODO: put this in the range of the event
-	timeOne := types.TimePair{
-		Start: time.Now(),
-		End:   time.Now(),
-	}
-	event.VoteOptions.StartEndPairs = []types.TimePair{timeOne}
-
-	// new random times within the limits
-
 	// TODO check userID is the creator of the event
 
 	// serialize to a string JSON
@@ -372,4 +352,38 @@ func (p *Provider) GetAllEvents(ctx context.Context) ([]*types.Event, error) {
 	}
 
 	return events, nil
+}
+
+func (p *Provider) UpdateVoteOptions(ctx context.Context, voteOptions types.VoteOption, eventID string) error {
+	collection := p.events()
+
+	// serialize to a string JSON
+	voteOptionsJSON, err := json.Marshal(voteOptions)
+	if err != nil {
+		return err
+	}
+	// deserialize that string into a map[string]interface{}
+	mmap := make(map[string]interface{})
+	err = json.Unmarshal(voteOptionsJSON, &mmap)
+	if err != nil {
+		return err
+	}
+
+	updateDocument := bson.D{}
+	for k, v := range mmap {
+		updateDocument = append(updateDocument, bson.E{Key: k, Value: v})
+	}
+
+	filter := bson.D{{Key: "id", Value: eventID}}
+	updateQuery := bson.D{{Key: "$set", Value: updateDocument}}
+
+	_, err = collection.UpdateOne(ctx, filter, updateQuery)
+
+	if err != nil {
+		if writeException, ok := err.(mongo.WriteException); ok && isDuplicate(writeException) {
+			return db.NewDuplicateIDError(eventID)
+		}
+		return err
+	}
+	return nil
 }

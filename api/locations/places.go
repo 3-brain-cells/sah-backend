@@ -11,6 +11,13 @@ import (
 	"github.com/3-brain-cells/sah-backend/types"
 )
 
+// type Location struct {
+// 	Name    string `json:"name" bson:"name"`
+// 	Address string `json:"address" bson:"address"`
+// 	Rating  int    `json:"rating" bson:"rating"`
+// 	Image   string `json:"image" bson:"image"`
+// }
+
 func GetNearby(event types.Event) ([]types.Location, error) {
 	var midpoint types.Coordinates
 	midpoint.Latitude = 0
@@ -87,7 +94,22 @@ func GetNearby(event types.Event) ([]types.Location, error) {
 	}
 	fmt.Println(string(body))
 
-	return nil, err
+	// parse body into list of locations
+	var woo map[string]interface{}
 
+	json.Unmarshal(body, &woo)
+	results := woo["results"].([]interface{})
+	// get the first 10 results from results
+	results = results[:10]
+	// parse these to get out rating, name, address, and image
+	locations := make([]types.Location, len(results))
+	for i, result := range results {
+		result := result.(map[string]interface{})
+		locations[i].Name = result["name"].(string)
+		locations[i].Address = result["vicinity"].(string)
+		locations[i].Image = result["icon"].(string)
+		locations[i].Rating = result["rating"].(int)
+	}
+	return locations, nil
 	// TODO: format the return
 }

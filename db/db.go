@@ -45,6 +45,9 @@ type EventProvider interface {
 	// GetAllEvents returns all events in the database
 	GetAllEvents(ctx context.Context) ([]*types.Event, error)
 
+	// UpdateVoteOptions updates the vote options for times and locations
+	UpdateVoteOptions(ctx context.Context, voteOptions types.VoteOption, eventID string) error
+
 	// Delete deletes an existing event
 	// Delete(ctx context.Context, eventID int) error
 }
