@@ -3,6 +3,7 @@ package events
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"log"
 	"math"
 	"net/http"
@@ -318,87 +319,72 @@ func FindAvailability(event types.Event) []types.DayAvailability {
 	//    with number of users available
 
 	// 24 * 4 buckets = 96 buckets * numDays
-	duration := event.LatestDate.Sub(event.EarliestDate)
-	var numDays float64 = duration.Hours() / 24
+	tempEarliest := time.Date(event.EarliestDate.Year(), event.EarliestDate.Month(), event.EarliestDate.Day(), 0, 0, 0, 0, event.EarliestDate.Location())
+	tempLatest := time.Date(event.EarliestDate.Year(), event.LatestDate.Month(), event.LatestDate.Day(), 0, 0, 0, 0, event.LatestDate.Location())
+	duration := tempLatest.Sub(tempEarliest)
+	var numDays float64 = 1 + duration.Hours()/24
 	var buckets = make([]int, int(96*numDays))
 	max := 0
+	fmt.Printf("bucket length: %v\n", len(buckets))
 
 	// populate the buckets
 	for _, userAvailability := range event.UserAvailability {
+		fmt.Printf("username:%+v, userAvailability: %+v\n", userAvailability.UserID, userAvailability)
 		for _, dayAvailability := range userAvailability.DayAvailability {
 			// bucket indexing [(dayNum * 96) + (hour * 4)]
-			offset := dayAvailability.Date.Sub(event.EarliestDate).Hours() * 4
+			// make temp time, copies event.Earliest Date and makes hour = 0
+			offset := dayAvailability.Date.Sub(tempEarliest).Hours() * 4
+
 			for _, block := range dayAvailability.AvailableBlocks {
-				startBucket := (block.StartMinute % 15) + block.StartHour + int(offset)
-				endBucket := int(math.Ceil(float64(block.EndMinute)/15)) + block.EndHour + int(offset)
+				startBucket := (block.StartMinute % 15) + (block.StartHour * 4) + int(offset)
+				endBucket := int(math.Ceil(float64(block.EndMinute)/15)) + (block.EndHour * 4) + int(offset)
 				for i := startBucket; i <= endBucket; i++ {
-					buckets[i] += 1
-					if buckets[i] > max {
-						max = buckets[i]
+					buckets[i-1] += 1
+					if buckets[i-1] > max {
+						max = buckets[i-1]
 					}
 				}
 			}
 		}
 	}
 
-	startBucket := -1
-	var endBucket int
+	fmt.Printf("buckets: %v\n", buckets)
+	fmt.Printf("max: %d\n", max)
+
+	// startBucket := -1
+	// var endBucket int
 	var ret []types.DayAvailability
 	// check which bucket ranges are most popular --> should be == max
-	for j := 0; j < int(numDays); j++ {
-		var dayBlock []types.AvailabilityBlock
-		for i := 0; i < 96; i++ {
-			if startBucket == -1 && buckets[i] == max {
-				startBucket = i
-			} else if buckets[i] < max || i-startBucket == 8 {
-				endBucket = i
-				var d types.AvailabilityBlock
-				d.StartHour = startBucket / 4
-				d.EndHour = endBucket / 4
-				d.StartMinute = 15 * (startBucket % 4)
-				d.EndMinute = 15 * (endBucket % 4)
-				dayBlock = append(dayBlock, d)
-				startBucket = -1
-			}
-		}
-		var day types.DayAvailability
-		day.Date = event.EarliestDate.Add(time.Hour * time.Duration(24*j))
-		// check if the dayBlock is empty
-		if len(dayBlock) > 0 {
-			day.AvailableBlocks = dayBlock
-			ret = append(ret, day)
-		}
-	}
+	// for len(ret) < 3 && max > 0 {
+	// 	ret = []types.DayAvailability{}
+	// 	for j := 0; j < int(numDays); j++ {
+	// 		startBucket = -1
+	// 		var dayBlock []types.AvailabilityBlock
+	// 		for i := 0; i < 96; i++ {
+	// 			if startBucket == -1 && buckets[j*96+i] >= max {
+	// 				startBucket = i
+	// 			} else if startBucket != -1 && (buckets[j*96+i] < max || i-startBucket == 8) {
+	// 				endBucket = i
+	// 				var d types.AvailabilityBlock
+	// 				d.StartHour = int(startBucket / 4)
+	// 				d.EndHour = int(endBucket / 4)
+	// 				d.StartMinute = 15 * (startBucket % 4)
+	// 				d.EndMinute = 15 * (endBucket % 4)
+	// 				dayBlock = append(dayBlock, d)
+	// 				startBucket = -1
+	// 			}
+	// 		}
+	// 		var day types.DayAvailability
+	// 		day.Date = event.EarliestDate.Add(time.Hour * time.Duration(24*j))
 
-	// check if we have at least three options, if not
-	// repeat with max - 1
-	if len(ret) < 3 {
-		ret := []types.DayAvailability{}
-		max -= 1
-		for j := 0; j < int(numDays); j++ {
-			var dayBlock []types.AvailabilityBlock
-			for i := 0; i < 96; i++ {
-				if startBucket == -1 && buckets[i] == max {
-					startBucket = i
-				} else if buckets[i] < max || i-startBucket == 8 {
-					endBucket = i
-					var d types.AvailabilityBlock
-					d.StartHour = startBucket / 4
-					d.EndHour = endBucket / 4
-					d.StartMinute = 15 * (startBucket % 4)
-					d.EndMinute = 15 * (endBucket % 4)
-					dayBlock = append(dayBlock, d)
-					startBucket = -1
-				}
-			}
-			var day types.DayAvailability
-			day.Date = event.EarliestDate.Add(time.Hour * time.Duration(24*j))
-			// check if the dayBlock is empty
-			if len(dayBlock) > 0 {
-				day.AvailableBlocks = dayBlock
-				ret = append(ret, day)
-			}
-		}
-	}
+	// 		fmt.Printf("returned: %+v\n", day)
+	// 		// check if the dayBlock is empty
+	// 		if len(dayBlock) > 0 {
+	// 			day.AvailableBlocks = dayBlock
+	// 			ret = append(ret, day)
+	// 		}
+	// 	}
+	// 	max = max - 1
+	// }
 	return ret
 }
