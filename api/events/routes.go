@@ -47,7 +47,7 @@ type GetVoteOptionsTime struct {
 }
 
 type GetVoteOptionsLocation struct {
-	Name                    string  `json:"names"`
+	Name                    string  `json:"name"`
 	YelpURL                 string  `json:"yelpUrl"`
 	Stars                   float64 `json:"stars"`
 	DistanceFromCurrentUser float64 `json:"distanceFromCurrentUser"`
@@ -65,11 +65,21 @@ func GetVoteOptions(eventProvider db.EventProvider) http.HandlerFunc {
 			return
 		}
 
+		// Get user ID from query string.
+		userID := r.URL.Query().Get("user_id")
+		if userID == "" {
+			util.ErrorWithCode(r, w, errors.New("the 'userID' query string is empty"),
+				http.StatusBadRequest)
+			return
+		}
+
 		event, err := eventProvider.GetSingle(r.Context(), id)
 		if err != nil {
 			util.Error(r, w, err)
 			return
 		}
+
+		userLocation := event.UserLocations[userID]
 
 		// Convert the data to GetVoteOptionsResponseBody
 		responseTimes := make([]GetVoteOptionsTime, len(event.VoteOptions.StartEndPairs))
@@ -85,9 +95,12 @@ func GetVoteOptions(eventProvider db.EventProvider) http.HandlerFunc {
 			responseLocations[i] = GetVoteOptionsLocation{
 				Name:                    location.Name,
 				YelpURL:                 "",
-				Stars:                   4,
-				DistanceFromCurrentUser: 8,
-				PreviewImageURL:         "",
+				Stars:                   location.Rating,
+				DistanceFromCurrentUser: latLongDistance(
+					coords{location.Latitude, location.Longitude},
+					coords{userLocation.Latitude, userLocation.Longitude},
+				),
+				PreviewImageURL:         location.Image,
 				Address:                 location.Address,
 			}
 		}
@@ -109,6 +122,24 @@ func GetVoteOptions(eventProvider db.EventProvider) http.HandlerFunc {
 	}
 }
 
+type coords struct {
+	latitude float64
+	longitude float64
+}
+
+// latLongDistance returns the distance, in miles,
+// between the two coordinates on the Earth's surface.
+func latLongDistance(c1 coords, c2 coords) float64 {
+	// Convert to radians.
+	lat1 := math.Pi * c1.latitude / 180
+	lat2 := math.Pi * c2.latitude / 180
+	long1 := math.Pi * c1.longitude / 180
+	long2 := math.Pi * c2.longitude / 180
+
+	// Calculate the great circle distance (in miles)
+	return math.Acos(math.Sin(lat1)*math.Sin(lat2) + math.Cos(lat1)*math.Cos(lat2)*math.Cos(long1-long2)) * 3958.8
+}
+
 type populateEventRequestBody struct {
 	UserID             string                 `json:"user_id"`
 	Title              string                 `json:"title"`
@@ -119,8 +150,12 @@ type populateEventRequestBody struct {
 	StartTimeMinute    int                    `json:"start_time_minute"`
 	EndTimeHour        int                    `json:"end_time_hour"`
 	EndTimeMinute      int                    `json:"end_time_minute"`
-	LocationCategory   types.LocationCategory `json:"location_category"`
 	SwitchToVotingTime time.Time              `json:"switch_to_voting"` // ISO 8601 string
+}
+
+func resetToBeginningOfDay(t time.Time) time.Time {
+    year, month, day := t.Date()
+    return time.Date(year, month, day, 0, 0, 0, 0, t.Location())
 }
 
 // need to confirm that the user who is populating the event is the same as the user who created the event
@@ -156,13 +191,12 @@ func PopulateEvent(eventProvider db.EventProvider, discordSession *discordgo.Ses
 			EventID:            id,
 			Title:              body.Title,
 			Description:        body.Description,
-			EarliestDate:       body.EarliestDate,
-			LatestDate:         body.LatestDate,
+			EarliestDate:       resetToBeginningOfDay(body.EarliestDate),
+			LatestDate:         resetToBeginningOfDay(body.LatestDate),
 			StartTimeHour:      body.StartTimeHour,
 			StartTimeMinute:    body.StartTimeMinute,
 			EndTimeHour:        body.EndTimeHour,
 			EndTimeMinute:      body.EndTimeMinute,
-			LocationCategory:   body.LocationCategory,
 			SwitchToVotingTime: body.SwitchToVotingTime,
 		}
 
@@ -205,8 +239,7 @@ func PostVotes(eventProvider db.EventProvider) http.HandlerFunc {
 		}
 
 		log.Printf("PostVotes event_id=%s user_id=%s", id, body.UserID)
-		err = eventProvider.PostVotes(r.Context(), types.UserVotes{
-			UserID:        body.UserID,
+		err = eventProvider.PostVotes(r.Context(), body.UserID, types.UserVotes{
 			LocationVotes: body.LocationVotes,
 			TimeVotes:     body.TimeVotes,
 		}, id)
@@ -448,8 +481,25 @@ func FindAvailability(event types.Event) []types.TimePair {
 			var pair types.TimePair
 			pair.Start = time.Date(day.Date.Year(), day.Date.Month(), day.Date.Day(), block.StartHour, block.StartMinute, 0, 0, day.Date.Location())
 			pair.End = time.Date(day.Date.Year(), day.Date.Month(), day.Date.Day(), block.EndHour, block.EndMinute, 0, 0, day.Date.Location())
+			pair.UserIDs = []types.User{}
+			for key, userAvailability := range event.UserAvailability {
+				for _, dayAvailability := range userAvailability.DayAvailability {
+					if dayAvailability.Date.Equal(day.Date) {
+						for _, block := range dayAvailability.AvailableBlocks {
+							if block.StartHour <= pair.Start.Hour() && block.StartMinute <= pair.Start.Minute() &&
+								block.EndHour >= pair.End.Hour() && block.EndMinute >= pair.End.Minute() {
+									// new user
+									var woohoo types.User
+									woohoo.ID = key
+									pair.UserIDs = append(pair.UserIDs, woohoo)
+							}
+						}
+					}
+				}
+			}
 			ret2 = append(ret2, pair)
 		}
 	}
+
 	return ret2
 }

@@ -34,13 +34,10 @@ type EventProvider interface {
 	PopulateEvent(ctx context.Context, event types.Event, userID string) error
 
 	// Update updates an existing event
-	PostVotes(ctx context.Context, votes types.UserVotes, eventID string) error
+	PostVotes(ctx context.Context, userID string, votes types.UserVotes, eventID string) error
 
 	// PutUserAvailabilityAndLocation updates the user availability and location
 	PutUserAvailabilityAndLocation(ctx context.Context, userID string, availability types.UserAvailability, location types.UserLocation, eventID string) error
-
-	// PutAvailability updates the user address
-	PutLocation(ctx context.Context, userID string, location types.UserLocation, eventID string) error
 
 	// GetAllEvents returns all events in the database
 	GetAllEvents(ctx context.Context) ([]*types.Event, error)

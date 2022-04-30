@@ -3,6 +3,7 @@ package events
 import (
 	"context"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/3-brain-cells/sah-backend/api/locations"
@@ -24,18 +25,25 @@ func ManageEvent(eventProvider db.EventProvider, discordSession *discordgo.Sessi
 	}
 	if currentTime.Before(event.SwitchToVotingTime) {
 		// event is currently in scheduling phase
-		str := fmt.Sprintf("Event %s is now in scheduling phase. Please input your schedule to the following link https://INSERTLINK.com/%s", event.Title, event.EventID)
+		str := fmt.Sprintf("Event %s is now in scheduling phase. Please input your schedule to the following link <https://super-auto-hangouts.netlify.app/availability/%s>", event.Title, event.EventID)
 		bot.SchedulingMessage(discordSession, str, event.ChannelID)
-		time.Sleep(event.SwitchToVotingTime.Sub(currentTime))
+		// time.Sleep(event.SwitchToVotingTime.Sub(currentTime))
+		time.Sleep(time.Second * 60)
 	}
 	if currentTime.Before(event.EarliestDate) {
 		// calculate best time and location options and update the database
+		event, err := eventProvider.GetSingle(ctx, eventID)
+		if err != nil {
+			fmt.Println("error getting event: ", err)
+			return
+		}
 		availTimes := FindAvailability(*event)
 		availLocations, err := locations.GetNearby(*event)
 		if err != nil {
 			fmt.Println("error getting locations: ", err)
 			return
 		}
+
 		// update these two to the database
 		event.VoteOptions.StartEndPairs = availTimes
 		event.VoteOptions.Location = availLocations
@@ -46,17 +54,34 @@ func ManageEvent(eventProvider db.EventProvider, discordSession *discordgo.Sessi
 			fmt.Println("error updating event: ", err)
 			return
 		}
-		str := fmt.Sprintf("Event %s is now in voting phase. Please vote at the following link https://INSERTLINK.com/%s", event.Title, event.EventID)
+		str := fmt.Sprintf("Event %s is now in voting phase. Please vote at the following link <https://super-auto-hangouts.netlify.app/vote/%s>", event.Title, event.EventID)
 		bot.SchedulingMessage(discordSession, str, event.ChannelID)
-		time.Sleep(event.EarliestDate.Sub(currentTime))
+		// time.Sleep(event.EarliestDate.Sub(currentTime))
+		time.Sleep(time.Second * 60)
 	}
 	// iterate through all event.uservotes
 	// get the location with most votes
 	// get the time with most votes
 
+	event, err = eventProvider.GetSingle(ctx, eventID)
+	if err != nil {
+		fmt.Println("error getting event: ", err)
+		return
+	}
+	
+	if len(event.UserVotes) == 0 {
+		log.Printf("No votes for event %s (event_id=%s); returning early", event.Title, event.EventID)
+		return
+	}
+
 	// make a new uservotes
-	finalTimes := make([]int, len(event.UserVotes[0].TimeVotes))
-	finalLocations := make([]int, len(event.UserVotes[0].LocationVotes))
+	var finalTimes []int 
+	var finalLocations []int
+	for _, v := range event.UserVotes {
+		finalTimes = make([]int, len(v.TimeVotes))
+		finalLocations = make([]int, len(v.LocationVotes))
+		break
+	}
 	for _, userVote := range event.UserVotes {
 		// get the location with most votes
 		// get the time with most votes

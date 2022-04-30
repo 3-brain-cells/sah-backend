@@ -27,36 +27,43 @@ type Event struct {
 	// Maps Discord User ID => availability
 	UserAvailability map[string]UserAvailability `json:"user_availability" bson:"user_availability"` // ^ not done until this is done
 	// Maps Discord User ID => location
-	UserLocations    map[string]UserLocation     `json:"user_locations" bson:"user_locations"`       // userID:userLocation
-	UserVotes        []UserVotes                 `json:"user_votes" bson:"user_votes"`               // ^ not done until this is done
+	UserLocations    map[string]UserLocation `json:"user_locations" bson:"user_locations"`       // userID:userLocation
+	UserVotes        map[string]UserVotes    `json:"user_votes" bson:"user_votes"`               // ^ not done until this is done
 }
 
 type VoteOption struct {
 	Location      []Location `json:"address" bson:"address"`
-	StartEndPairs []TimePair `json:"startEndPairs" bson:"startEndPairs"`
+	StartEndPairs []TimePair `json:"start_end_pairs" bson:"start_end_pairs"`
 }
 
 type Location struct {
-	Name    string `json:"name" bson:"name"`
-	Address string `json:"address" bson:"address"`
-	Rating  int    `json:"rating" bson:"rating"`
-	Image   string `json:"image" bson:"image"`
+	Name    string  `json:"name" bson:"name"`
+	Address string  `json:"address" bson:"address"`
+	Rating  float64 `json:"rating" bson:"rating"`
+	Image   string  `json:"image" bson:"image"`
+	Latitude  float64 `json:"latitude" bson:"latitude"`
+	Longitude float64 `json:"longitude" bson:"longitude"`
 }
 
 type UserLocation struct {
-	Latitude float64 `json:"latitude" bson:"latitude"`
+	Latitude  float64 `json:"latitude" bson:"latitude"`
 	Longitude float64 `json:"longitude" bson:"longitude"`
 }
 
 type TimePair struct {
 	Start time.Time `json:"start" bson:"start"`
 	End   time.Time `json:"end" bson:"end"`
+	UserIDs []User `json:"user_ids" bson:"user_ids"`
+}
+
+type User struct {
+	ID       string `json:"id" bson:"id"`
+	Color string `json:"color" bson:"color"`
 }
 
 type UserVotes struct {
-	UserID        string `json:"userID" bson:"userID"`
-	LocationVotes []int  `json:"locationVotes" bson:"locationVotes"`
-	TimeVotes     []int  `json:"timeVotes" bson:"timeVotes"`
+	LocationVotes []int  `json:"location_votes" bson:"location_votes"`
+	TimeVotes     []int  `json:"time_votes" bson:"time_votes"`
 }
 
 type UserAvailability struct {

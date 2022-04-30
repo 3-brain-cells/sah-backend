@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"go.mongodb.org/mongo-driver/bson"
@@ -144,6 +145,16 @@ func (p *Provider) GetSingle(ctx context.Context, eventID string) (*types.Event,
 
 func (p *Provider) CreatePartial(ctx context.Context, event types.Event) error {
 	collection := p.events()
+	// Ensure nested maps are empty
+	if event.UserAvailability == nil {
+		event.UserAvailability = make(map[string]types.UserAvailability)
+	}
+	if event.UserLocations == nil {
+		event.UserLocations = make(map[string]types.UserLocation)
+	}
+	if event.UserVotes == nil {
+		event.UserVotes = make(map[string]types.UserVotes)
+	}
 	_, err := collection.InsertOne(ctx, event)
 	if err != nil {
 		if writeException, ok := err.(mongo.WriteException); ok && isDuplicate(writeException) {
@@ -161,6 +172,9 @@ func (p *Provider) CreatePartial(ctx context.Context, event types.Event) error {
 // - channelID
 // - populated
 // - voteOptions
+// - userVotes
+// - userAvailability
+// - userLocations
 // - userVotes
 func (p *Provider) PopulateEvent(ctx context.Context, event types.Event, userID string) error {
 	collection := p.events()
@@ -185,7 +199,7 @@ func (p *Provider) PopulateEvent(ctx context.Context, event types.Event, userID 
 		// - GuildID
 		// - Populated
 		// - UserVotes
-		if k == "id" || k == "creator_id" || k == "guild_id" || k == "populated" || k == "user_votes" || k == "channel_id" {
+		if k == "id" || k == "creator_id" || k == "guild_id" || k == "populated" || k == "user_votes" || k == "channel_id" || k == "user_availability" || k == "user_locations" || k == "vote_options" || k == "user_votes" {
 			continue
 		}
 		updateDocument = append(updateDocument, bson.E{Key: k, Value: v})
@@ -206,17 +220,31 @@ func (p *Provider) PopulateEvent(ctx context.Context, event types.Event, userID 
 }
 
 // Update updates an existing event
-func (p *Provider) PostVotes(ctx context.Context, votes types.UserVotes, eventID string) error {
-
+func (p *Provider) PostVotes(ctx context.Context, userID string, votes types.UserVotes, eventID string) error {
 	collection := p.events()
-	filter := bson.D{{Key: "id", Value: eventID}}
-	updateQuery := bson.D{{Key: "$set", Value: votes}}
-	var updatedEevent types.Event
-	err := collection.FindOneAndUpdate(ctx, filter, updateQuery).Decode(&updatedEevent)
+
+	votesJson, err := toRawRepresentation(votes)
 	if err != nil {
-		if err == mongo.ErrNoDocuments {
-			return db.NewNotFoundError(eventID)
-		}
+		return fmt.Errorf("failed to marshal votes: %w", err)
+	}
+
+	filter := bson.D{{Key: "id", Value: eventID}}
+	updateQuery := bson.M{
+		"$set": bson.M{
+			fmt.Sprintf("user_votes.%s", userID): rawToBson(votesJson),
+		},
+	}
+
+	// print out using log. the userid and votes and event id and filter and update query
+	log.Printf("userid: %#v", userID)
+	log.Printf("votes: %#v", votesJson)
+	log.Printf("event id: %#v", eventID)
+	log.Printf("filter: %#v", filter)
+	log.Printf("update query: %#v", updateQuery)
+
+	_, err = collection.UpdateOne(ctx, filter, updateQuery)
+	if err != nil {
+		return fmt.Errorf("failed to update votes for userID=%s eventID=%s: %w", userID, eventID, err)
 	}
 
 	return nil
@@ -251,83 +279,57 @@ func isDuplicate(writeException mongo.WriteException) bool {
 	return false
 }
 
-func (p *Provider) PutUserAvailabilityAndLocation(ctx context.Context, userID string, availability types.UserAvailability, location types.UserLocation, eventID string) error {
-	// TODO implement :)
-	// Note: we probably want to change both availability and votes
-	// to use map[string][...] where the key is the user ID
-	// to make it trivial to upsert the new availability/vote into the event's map
-	// as a single operation
-
-	collection := p.events()
-
-	mmap := make(map[string]interface{})
-	mmap[userID] = availability.DayAvailability
-
-	// create userID -> availability
-	availabilityJSON, err := json.Marshal(mmap)
+func toRawRepresentation(val interface{}) (map[string]interface{}, error) {
+	jsonString, err := json.Marshal(val)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to marshal value '%#v' to create raw representation: %w", val, err)
 	}
-	// deserialize that string into a map[string]interface{}
-	mmap = make(map[string]interface{})
-	err = json.Unmarshal(availabilityJSON, &mmap)
+
+	rawRepresentation := make(map[string]interface{})
+	err = json.Unmarshal(jsonString, &rawRepresentation)
 	if err != nil {
-		return err
+		return nil, fmt.Errorf("failed to unmarshal raw representation of JSON string '%s': %w", jsonString, err)
 	}
 
-	updateDocument := bson.D{}
-	for k, v := range mmap {
-		updateDocument = append(updateDocument, bson.E{Key: k, Value: v})
-	}
-
-	filter := bson.D{{Key: "id", Value: eventID}}
-	updateQuery := bson.D{{Key: "$set", Value: updateDocument}}
-
-	_, err = collection.UpdateOne(ctx, filter, updateQuery)
-
-	if err != nil {
-		if writeException, ok := err.(mongo.WriteException); ok && isDuplicate(writeException) {
-			return db.NewDuplicateIDError(eventID)
-		}
-		return err
-	}
-	return nil
+	return rawRepresentation, nil
 }
 
-func (p *Provider) PutLocation(ctx context.Context, userID string, location types.UserLocation, eventID string) error {
+func rawToBson(rawRepresentation map[string]interface{}) bson.D {
+	bsonRepresentation := bson.D{}
+	for k, v := range rawRepresentation {
+		bsonRepresentation = append(bsonRepresentation, bson.E{Key: k, Value: v})
+	}
+	return bsonRepresentation
+}
+
+func (p *Provider) PutUserAvailabilityAndLocation(ctx context.Context, userID string,
+	availability types.UserAvailability, location types.UserLocation, eventID string) error {
+
 	collection := p.events()
 
-	mmap := make(map[string]interface{})
-	mmap[userID] = location
-
-	// create userID -> availability
-	locationJSON, err := json.Marshal(mmap)
+	availabilityJson, err := toRawRepresentation(availability)
 	if err != nil {
-		return err
-	}
-	// deserialize that string into a map[string]interface{}
-	mmap = make(map[string]interface{})
-	err = json.Unmarshal(locationJSON, &mmap)
-	if err != nil {
-		return err
+		return fmt.Errorf("failed to marshal availability: %w", err)
 	}
 
-	updateDocument := bson.D{}
-	for k, v := range mmap {
-		updateDocument = append(updateDocument, bson.E{Key: k, Value: v})
+	locationJson, err := toRawRepresentation(location)
+	if err != nil {
+		return fmt.Errorf("failed to marshal location: %w", err)
 	}
 
 	filter := bson.D{{Key: "id", Value: eventID}}
-	updateQuery := bson.D{{Key: "$set", Value: updateDocument}}
+	updateQuery := bson.M{
+		"$set": bson.M{
+			fmt.Sprintf("user_availability.%s", userID): rawToBson(availabilityJson),
+			fmt.Sprintf("user_locations.%s", userID):   rawToBson(locationJson),
+		},
+	}
 
 	_, err = collection.UpdateOne(ctx, filter, updateQuery)
-
 	if err != nil {
-		if writeException, ok := err.(mongo.WriteException); ok && isDuplicate(writeException) {
-			return db.NewDuplicateIDError(eventID)
-		}
-		return err
+		return fmt.Errorf("failed to update availability and location for userID=%s eventID=%s: %w", userID, eventID, err)
 	}
+
 	return nil
 }
 
@@ -354,33 +356,22 @@ func (p *Provider) GetAllEvents(ctx context.Context) ([]*types.Event, error) {
 func (p *Provider) UpdateVoteOptions(ctx context.Context, voteOptions types.VoteOption, eventID string) error {
 	collection := p.events()
 
-	// serialize to a string JSON
-	voteOptionsJSON, err := json.Marshal(voteOptions)
+	voteOptionsJson, err := toRawRepresentation(voteOptions)
 	if err != nil {
-		return err
-	}
-	// deserialize that string into a map[string]interface{}
-	mmap := make(map[string]interface{})
-	err = json.Unmarshal(voteOptionsJSON, &mmap)
-	if err != nil {
-		return err
-	}
-
-	updateDocument := bson.D{}
-	for k, v := range mmap {
-		updateDocument = append(updateDocument, bson.E{Key: k, Value: v})
+		return fmt.Errorf("failed to marshal voteOptions: %w", err)
 	}
 
 	filter := bson.D{{Key: "id", Value: eventID}}
-	updateQuery := bson.D{{Key: "$set", Value: updateDocument}}
+	updateQuery := bson.M{
+		"$set": bson.M{
+			"vote_options": rawToBson(voteOptionsJson),
+		},
+	}
 
 	_, err = collection.UpdateOne(ctx, filter, updateQuery)
-
 	if err != nil {
-		if writeException, ok := err.(mongo.WriteException); ok && isDuplicate(writeException) {
-			return db.NewDuplicateIDError(eventID)
-		}
-		return err
+		return fmt.Errorf("failed to update vote options eventID=%s: %w", eventID, err)
 	}
+
 	return nil
 }
