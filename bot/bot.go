@@ -3,7 +3,6 @@ package bot
 import (
 	"context"
 	"flag"
-	"fmt"
 	"log"
 	"os"
 	"os/signal"
@@ -36,7 +35,7 @@ func RunBot(dbProvider db.Provider, discordSession *discordgo.Session) {
 			guildID := i.Interaction.GuildID
 			channelID := i.Interaction.ChannelID
 
-			content := fmt.Sprintf("<%s>", create_event(userID, guildID, channelID, dbProvider))
+			content := create_event(userID, guildID, channelID, dbProvider)
 
 			s.InteractionRespond(i.Interaction, &discordgo.InteractionResponse{
 				Type: discordgo.InteractionResponseChannelMessageWithSource,
