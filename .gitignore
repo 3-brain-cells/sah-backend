@@ -5,3 +5,7 @@
 out
 
 .vscode/
+
+# Ignore the binary file
+sah-backend
+
