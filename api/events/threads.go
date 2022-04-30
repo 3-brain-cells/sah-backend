@@ -68,28 +68,24 @@ func ManageEvent(eventProvider db.EventProvider, discordSession *discordgo.Sessi
 		fmt.Println("error getting event: ", err)
 		return
 	}
-	
+
 	if len(event.UserVotes) == 0 {
 		log.Printf("No votes for event %s (event_id=%s); returning early", event.Title, event.EventID)
 		return
 	}
 
 	// make a new uservotes
-	var finalTimes []int 
-	var finalLocations []int
-	for _, v := range event.UserVotes {
-		finalTimes = make([]int, len(v.TimeVotes))
-		finalLocations = make([]int, len(v.LocationVotes))
-		break
-	}
+	finalTimes := make(map[int]int)
+	finalLocations := make(map[int]int)
+
 	for _, userVote := range event.UserVotes {
 		// get the location with most votes
 		// get the time with most votes
-		for i, timeVote := range userVote.TimeVotes {
-			finalTimes[i] += timeVote
+		for _, timeVote := range userVote.TimeVotes {
+			finalTimes[timeVote] += 1
 		}
-		for i, locationVote := range userVote.LocationVotes {
-			finalLocations[i] += locationVote
+		for _, locationVote := range userVote.LocationVotes {
+			finalLocations[locationVote] += 1
 		}
 	}
 	// get the location with most votes
