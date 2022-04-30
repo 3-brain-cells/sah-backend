@@ -52,7 +52,7 @@ func Routes(database db.Provider) *chi.Mux {
 func oath_config(id string, secret string, router *chi.Mux) {
 	// Create a config.
 	conf := oauth2.Config{
-		RedirectURL:  "http://localhost:5000/auth/callback",
+		RedirectURL:  "https://kairosaio.com/auth/callback",
 		ClientID:     id,
 		ClientSecret: secret,
 		Scopes:       []string{discord.ScopeIdentify},

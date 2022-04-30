@@ -41,9 +41,9 @@ type GetVoteOptionsResponseBody struct {
 }
 
 type GetVoteOptionsTime struct {
-	Start     time.Time `json:"start"`
-	End       time.Time `json:"end"`
-	Available []string  `json:"available"`
+	Start time.Time    `json:"start"`
+	End   time.Time    `json:"end"`
+	Users []types.User `json:"users"`
 }
 
 type GetVoteOptionsLocation struct {
@@ -85,23 +85,23 @@ func GetVoteOptions(eventProvider db.EventProvider) http.HandlerFunc {
 		responseTimes := make([]GetVoteOptionsTime, len(event.VoteOptions.StartEndPairs))
 		for i, time := range event.VoteOptions.StartEndPairs {
 			responseTimes[i] = GetVoteOptionsTime{
-				Start:     time.Start,
-				End:       time.End,
-				Available: []string{},
+				Start: time.Start,
+				End:   time.End,
+				Users: time.Users,
 			}
 		}
 		responseLocations := make([]GetVoteOptionsLocation, len(event.VoteOptions.Location))
 		for i, location := range event.VoteOptions.Location {
 			responseLocations[i] = GetVoteOptionsLocation{
-				Name:                    location.Name,
-				YelpURL:                 "",
-				Stars:                   location.Rating,
+				Name:    location.Name,
+				YelpURL: "",
+				Stars:   location.Rating,
 				DistanceFromCurrentUser: latLongDistance(
 					coords{location.Latitude, location.Longitude},
 					coords{userLocation.Latitude, userLocation.Longitude},
 				),
-				PreviewImageURL:         location.Image,
-				Address:                 location.Address,
+				PreviewImageURL: location.Image,
+				Address:         location.Address,
 			}
 		}
 		responseBody := GetVoteOptionsResponseBody{
@@ -123,7 +123,7 @@ func GetVoteOptions(eventProvider db.EventProvider) http.HandlerFunc {
 }
 
 type coords struct {
-	latitude float64
+	latitude  float64
 	longitude float64
 }
 
@@ -137,25 +137,25 @@ func latLongDistance(c1 coords, c2 coords) float64 {
 	long2 := math.Pi * c2.longitude / 180
 
 	// Calculate the great circle distance (in miles)
-	return math.Acos(math.Sin(lat1)*math.Sin(lat2) + math.Cos(lat1)*math.Cos(lat2)*math.Cos(long1-long2)) * 3958.8
+	return math.Acos(math.Sin(lat1)*math.Sin(lat2)+math.Cos(lat1)*math.Cos(lat2)*math.Cos(long1-long2)) * 3958.8
 }
 
 type populateEventRequestBody struct {
-	UserID             string                 `json:"user_id"`
-	Title              string                 `json:"title"`
-	Description        string                 `json:"description"`
-	EarliestDate       time.Time              `json:"earliest_date"` // ISO 8601 string
-	LatestDate         time.Time              `json:"latest_date"`   // ISO 8601 string
-	StartTimeHour      int                    `json:"start_time_hour"`
-	StartTimeMinute    int                    `json:"start_time_minute"`
-	EndTimeHour        int                    `json:"end_time_hour"`
-	EndTimeMinute      int                    `json:"end_time_minute"`
-	SwitchToVotingTime time.Time              `json:"switch_to_voting"` // ISO 8601 string
+	UserID             string    `json:"user_id"`
+	Title              string    `json:"title"`
+	Description        string    `json:"description"`
+	EarliestDate       time.Time `json:"earliest_date"` // ISO 8601 string
+	LatestDate         time.Time `json:"latest_date"`   // ISO 8601 string
+	StartTimeHour      int       `json:"start_time_hour"`
+	StartTimeMinute    int       `json:"start_time_minute"`
+	EndTimeHour        int       `json:"end_time_hour"`
+	EndTimeMinute      int       `json:"end_time_minute"`
+	SwitchToVotingTime time.Time `json:"switch_to_voting"` // ISO 8601 string
 }
 
 func resetToBeginningOfDay(t time.Time) time.Time {
-    year, month, day := t.Date()
-    return time.Date(year, month, day, 0, 0, 0, 0, t.Location())
+	year, month, day := t.Date()
+	return time.Date(year, month, day, 0, 0, 0, 0, t.Location())
 }
 
 // need to confirm that the user who is populating the event is the same as the user who created the event
@@ -320,10 +320,6 @@ func GetAvailability(eventProvider db.EventProvider) http.HandlerFunc {
 	}
 }
 
-type putLocationRequestBody struct {
-	Address string `json:"address"`
-}
-
 // func PutLocation(eventProvider db.EventProvider) http.HandlerFunc {
 // 	return func(w http.ResponseWriter, r *http.Request) {
 // 		id := chi.URLParam(r, "id")
@@ -361,8 +357,8 @@ type putLocationRequestBody struct {
 // }
 
 type putAvailabilityRequestBody struct {
-	Days []types.DayAvailability `json:"days"`
-	Location types.UserLocation `json:"location"`
+	Days     []types.DayAvailability `json:"days"`
+	Location types.UserLocation      `json:"location"`
 }
 
 func PutAvailability(eventProvider db.EventProvider) http.HandlerFunc {
@@ -449,7 +445,7 @@ func FindAvailability(event types.Event) []types.TimePair {
 					startBucket = i
 				} else if startBucket != -1 && buckets[j*48+i] < max && i-startBucket < 2 {
 					// needs to be at least 1 hr long
-					continue;
+					continue
 				} else if startBucket != -1 && (buckets[j*48+i] < max || i-startBucket == 12) {
 					// max of 3 hrs
 					endBucket = i
@@ -481,21 +477,28 @@ func FindAvailability(event types.Event) []types.TimePair {
 			var pair types.TimePair
 			pair.Start = time.Date(day.Date.Year(), day.Date.Month(), day.Date.Day(), block.StartHour, block.StartMinute, 0, 0, day.Date.Location())
 			pair.End = time.Date(day.Date.Year(), day.Date.Month(), day.Date.Day(), block.EndHour, block.EndMinute, 0, 0, day.Date.Location())
-			pair.UserIDs = []types.User{}
+			userSet := make(map[types.User]struct{})
 			for key, userAvailability := range event.UserAvailability {
 				for _, dayAvailability := range userAvailability.DayAvailability {
 					if dayAvailability.Date.Equal(day.Date) {
 						for _, block := range dayAvailability.AvailableBlocks {
-							if block.StartHour <= pair.Start.Hour() && block.StartMinute <= pair.Start.Minute() &&
-								block.EndHour >= pair.End.Hour() && block.EndMinute >= pair.End.Minute() {
+							if block.StartHour*60+block.StartMinute >= pair.Start.Hour()*60+pair.Start.Minute() &&
+								block.EndHour*60+block.EndMinute <= pair.End.Hour()*60+pair.End.Minute() {
+								var woohoo types.User
+								woohoo.ID = key
+								if _, ok := userSet[woohoo]; !ok {
 									// new user
-									var woohoo types.User
-									woohoo.ID = key
-									pair.UserIDs = append(pair.UserIDs, woohoo)
+									log.Printf("adding userID=%s", key)
+									userSet[woohoo] = struct{}{}
+								}
 							}
 						}
 					}
 				}
+			}
+			pair.Users = []types.User{}
+			for user := range userSet {
+				pair.Users = append(pair.Users, user)
 			}
 			ret2 = append(ret2, pair)
 		}

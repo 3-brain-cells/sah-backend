@@ -4,11 +4,13 @@ import (
 	"context"
 	"fmt"
 	"log"
+	"sort"
 	"time"
 
 	"github.com/3-brain-cells/sah-backend/api/locations"
 	"github.com/3-brain-cells/sah-backend/bot"
 	"github.com/3-brain-cells/sah-backend/db"
+	"github.com/3-brain-cells/sah-backend/types"
 	"github.com/bwmarrin/discordgo"
 )
 
@@ -25,7 +27,10 @@ func ManageEvent(eventProvider db.EventProvider, discordSession *discordgo.Sessi
 	}
 	if currentTime.Before(event.SwitchToVotingTime) {
 		// event is currently in scheduling phase
-		str := fmt.Sprintf("Event %s is now in scheduling phase. Please input your schedule to the following link <https://super-auto-hangouts.netlify.app/availability/%s>", event.Title, event.EventID)
+		str := fmt.Sprintf("New event created: **%s**\n"+
+			"Possible dates: %v through %v\n"+
+			"Possible times: %d:%02d through %d:%02d\n"+
+			"\nEnter your availability here: <https://super-auto-hangouts.netlify.app/availability/%s>", event.Title, event.EarliestDate.Format("01-02-2006"), event.LatestDate.Format("01-02-2006"), event.StartTimeHour, event.StartTimeMinute, event.EndTimeHour, event.EndTimeMinute, event.EventID)
 		bot.SchedulingMessage(discordSession, str, event.ChannelID)
 		// time.Sleep(event.SwitchToVotingTime.Sub(currentTime))
 		time.Sleep(time.Second * 60)
@@ -38,6 +43,8 @@ func ManageEvent(eventProvider db.EventProvider, discordSession *discordgo.Sessi
 			return
 		}
 		availTimes := FindAvailability(*event)
+		// Add all user colors and names to the vote time options
+		addUserColorsAndNames(event.GuildID, availTimes, discordSession)
 		availLocations, err := locations.GetNearby(*event)
 		if err != nil {
 			fmt.Println("error getting locations: ", err)
@@ -54,7 +61,9 @@ func ManageEvent(eventProvider db.EventProvider, discordSession *discordgo.Sessi
 			fmt.Println("error updating event: ", err)
 			return
 		}
-		str := fmt.Sprintf("Event %s is now in voting phase. Please vote at the following link <https://super-auto-hangouts.netlify.app/vote/%s>", event.Title, event.EventID)
+		str := fmt.Sprintf("Voting for event **%s** location and time has started: <https://super-auto-hangouts.netlify.app/vote/%s>\n"+
+			"Possible dates: %v through %v\n"+
+			"Possible times: %d:%02d through %d:%02d\n", event.Title, event.EventID, event.EarliestDate.Format("01-02-2006"), event.LatestDate.Format("01-02-2006"), event.StartTimeHour, event.StartTimeMinute, event.EndTimeHour, event.EndTimeMinute)
 		bot.SchedulingMessage(discordSession, str, event.ChannelID)
 		// time.Sleep(event.EarliestDate.Sub(currentTime))
 		time.Sleep(time.Second * 60)
@@ -142,4 +151,79 @@ func Restart(eventProvider db.EventProvider, discordSession *discordgo.Session) 
 		}
 	}
 
+}
+
+func addUserColorsAndNames(guildID string, availTimes []types.TimePair, discordSession *discordgo.Session) {
+	type colorAndName struct {
+		Color string
+		Name  string
+	}
+
+	guild, err := discordSession.Guild(guildID)
+	if err != nil {
+		fmt.Printf("Error getting guild (guild_id=%s): %v", guildID, err)
+	}
+
+	colorMap := make(map[string]colorAndName)
+	for i := range availTimes {
+		for j := range availTimes[i].Users {
+			id := availTimes[i].Users[j].ID
+			if _, ok := colorMap[id]; !ok {
+				var name string = "unknown"
+				var color string = "#222222"
+
+				// Fetch the user's color and name
+				member, err := discordSession.GuildMember(guildID, id)
+				if err != nil {
+					fmt.Printf("Error getting member (user_id=%s, guild_id=%s): %v", id, guildID, err)
+				}
+
+				if member != nil {
+					if member.Nick != "" {
+						name = member.Nick
+					} else {
+						name = member.User.Username
+					}
+
+					colorInt := firstRoleColor(guild, member.Roles)
+					if colorInt != 0 {
+						color = fmt.Sprintf("#%06X", colorInt)
+					}
+				}
+
+				// Store the color and name
+				colorMap[id] = colorAndName{
+					Color: color,
+					Name:  name,
+				}
+			}
+
+			availTimes[i].Users[j].Color = colorMap[id].Color
+			availTimes[i].Users[j].Name = colorMap[id].Name
+		}
+	}
+}
+
+// From https://github.com/bwmarrin/discordgo/blob/cd95ccc2d3c030436fcd9ec3caf0b43f539350dd/state.go#L1258
+func firstRoleColor(guild *discordgo.Guild, memberRoles []string) int {
+	roles := discordgo.Roles(guild.Roles)
+	sort.Sort(roles)
+
+	for _, role := range roles {
+		for _, roleID := range memberRoles {
+			if role.ID == roleID {
+				if role.Color != 0 {
+					return role.Color
+				}
+			}
+		}
+	}
+
+	for _, role := range roles {
+		if role.ID == guild.ID {
+			return role.Color
+		}
+	}
+
+	return 0
 }

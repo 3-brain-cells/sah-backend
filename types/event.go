@@ -53,12 +53,13 @@ type UserLocation struct {
 type TimePair struct {
 	Start time.Time `json:"start" bson:"start"`
 	End   time.Time `json:"end" bson:"end"`
-	UserIDs []User `json:"user_ids" bson:"user_ids"`
+	Users []User `json:"users" bson:"users"`
 }
 
 type User struct {
 	ID       string `json:"id" bson:"id"`
 	Color string `json:"color" bson:"color"`
+	Name string `json:"name" bson:"name"`
 }
 
 type UserVotes struct {

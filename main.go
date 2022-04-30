@@ -13,7 +13,6 @@ package main
 import (
 	"context"
 	"flag"
-	"fmt"
 	stdlog "log"
 	"os"
 	"time"
@@ -65,15 +64,12 @@ func main() {
 
 	ctx := context.Background()
 
-	logger.Info().Str("provider", fmt.Sprintf("%#+v", api.dbProvider)).Msg("Connecting to external deps")
 	err = api.Connect(ctx)
 	if err != nil {
 		stdlog.Panicf("error: %v", err)
 	}
 
-	logger.Info().Str("provider", fmt.Sprintf("%#+v", api.dbProvider)).Err(ctx.Err()).Msg("Connected to external deps")
 	go api.Serve(ctx, 5000)
-	logger.Info().Str("provider", fmt.Sprintf("%#+v", api.dbProvider)).Msg("Forked thread to serve")
 	// Set up the bot
 	bot.RunBot(api.dbProvider, api.discordSession)
 }

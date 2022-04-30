@@ -3,6 +3,7 @@ package bot
 import (
 	"context"
 	"fmt"
+	"strings"
 
 	"github.com/3-brain-cells/sah-backend/db"
 	"github.com/3-brain-cells/sah-backend/types"
@@ -10,9 +11,10 @@ import (
 )
 
 func create_event(userID string, guildID string, channelID string, eventProvider db.EventProvider) string {
-
 	// generate an eventID
-	eventID := ksuid.New().String()
+	// as a short, 5-character string of random alphanumeric characters
+	rawId := ksuid.New().String()
+	eventID := strings.ToLower(rawId[len(rawId)-5:])
 
 	event := types.Event{CreatorID: userID, GuildID: guildID, EventID: eventID, ChannelID: channelID}
 
@@ -23,5 +25,5 @@ func create_event(userID string, guildID string, channelID string, eventProvider
 		fmt.Println("Error creating event: ", err)
 		// return "try again"
 	}
-	return fmt.Sprintf("https://super-auto-hangouts.netlify.app/new/%v", eventID)
+	return fmt.Sprintf("New event created: <https://super-auto-hangouts.netlify.app/new/%v>", eventID)
 }
