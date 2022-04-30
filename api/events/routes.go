@@ -470,13 +470,15 @@ func FindAvailability(event types.Event) []types.TimePair {
 		max = max - 1
 	}
 
+	loc, _ := time.LoadLocation("EST")
+
 	// convert ret to list of time pairs
 	var ret2 []types.TimePair
 	for _, day := range ret {
 		for _, block := range day.AvailableBlocks {
 			var pair types.TimePair
-			pair.Start = time.Date(day.Date.Year(), day.Date.Month(), day.Date.Day(), block.StartHour, block.StartMinute, 0, 0, day.Date.Location())
-			pair.End = time.Date(day.Date.Year(), day.Date.Month(), day.Date.Day(), block.EndHour, block.EndMinute, 0, 0, day.Date.Location())
+			pair.Start = time.Date(day.Date.Year(), day.Date.Month(), day.Date.Day(), block.StartHour, block.StartMinute, 0, 0, loc)
+			pair.End = time.Date(day.Date.Year(), day.Date.Month(), day.Date.Day(), block.EndHour, block.EndMinute, 0, 0, loc)
 			userSet := make(map[types.User]struct{})
 			for key, userAvailability := range event.UserAvailability {
 				for _, dayAvailability := range userAvailability.DayAvailability {
