@@ -48,7 +48,6 @@ type GetVoteOptionsTime struct {
 
 type GetVoteOptionsLocation struct {
 	Name                    string  `json:"name"`
-	YelpURL                 string  `json:"yelpUrl"`
 	Stars                   float64 `json:"stars"`
 	DistanceFromCurrentUser float64 `json:"distanceFromCurrentUser"`
 	PreviewImageURL         string  `json:"previewImageUrl"`
@@ -93,9 +92,8 @@ func GetVoteOptions(eventProvider db.EventProvider) http.HandlerFunc {
 		responseLocations := make([]GetVoteOptionsLocation, len(event.VoteOptions.Location))
 		for i, location := range event.VoteOptions.Location {
 			responseLocations[i] = GetVoteOptionsLocation{
-				Name:    location.Name,
-				YelpURL: "",
-				Stars:   location.Rating,
+				Name:  location.Name,
+				Stars: location.Rating,
 				DistanceFromCurrentUser: latLongDistance(
 					coords{location.Latitude, location.Longitude},
 					coords{userLocation.Latitude, userLocation.Longitude},
