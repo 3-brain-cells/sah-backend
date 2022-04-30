@@ -120,7 +120,10 @@ func ManageEvent(eventProvider db.EventProvider, discordSession *discordgo.Sessi
 	locationFinal := event.VoteOptions.Location[locationIndex]
 	startEndFinal := event.VoteOptions.StartEndPairs[timeIndex]
 
-	str := fmt.Sprintf("Event %v is now over. The event will take place at %v (%v) from %v till %v", event.Title, locationFinal.Name, locationFinal.Address, startEndFinal.Start, startEndFinal.End)
+	loc, _ := time.LoadLocation("EST")
+	start := time.Date(startEndFinal.Start.Year(), startEndFinal.Start.Month(), startEndFinal.Start.Day(), startEndFinal.Start.Hour(), startEndFinal.Start.Minute(), 0, 0, loc)
+	end := time.Date(startEndFinal.End.Year(), startEndFinal.End.Month(), startEndFinal.End.Day(), startEndFinal.End.Hour(), startEndFinal.End.Minute(), 0, 0, loc)
+	str := fmt.Sprintf("Event %v is now over. The event will take place at %v (%v) on %v from %d:%02d till %d:%02d", event.Title, locationFinal.Name, locationFinal.Address, start.Format("01-02-2006"), start.Hour(), start.Minute(), end.Hour(), end.Minute())
 	bot.SchedulingMessage(discordSession, str, event.ChannelID)
 
 }
